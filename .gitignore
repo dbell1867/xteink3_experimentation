@@ -12,3 +12,4 @@ build/
 
 # Python environment for tools/ (python -m venv .venv && .venv/bin/pip install -r tools/requirements.txt)
 .venv/
+__pycache__/
