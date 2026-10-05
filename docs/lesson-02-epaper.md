@@ -1,4 +1,4 @@
-# Lesson 02 — E-paper: first light, orientation, refresh modes and ghosting
+# Lesson 02 — Epaper: first light, orientation, refresh modes and ghosting
 
 **Stages:** 2, 2b, 4, 5 · **Code:** `stages/02-first-light/`, `02b-portrait-bezel/`, `04-page-turns/`, `05-ghost-management/`
 **Driver:** `src/epd_uc8253.{h,cpp}`, waveforms `include/uc8253_x3_luts.h`
