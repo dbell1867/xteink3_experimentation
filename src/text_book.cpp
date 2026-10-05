@@ -1,5 +1,7 @@
 #include "text_book.h"
 
+#include <algorithm>
+
 namespace {
 // Width of an ASCII string in pixels, straight from the font's glyph table
 // (much faster than getTextBounds, which matters when indexing a whole book).
@@ -103,29 +105,25 @@ bool TextBook::startsParagraph(uint32_t offset) {
 
 // ---------------------------------------------------------- tokenizer ---
 
-// Map a Unicode code point to ASCII the font can draw.
+// Map a Unicode code point to the byte our font uses for it. The font is laid
+// out as Windows-1252: ASCII, Latin-1 letters (U+00A0-00FF keep their value),
+// and typographic punctuation packed into 0x80-0x9F. Anything else -> '?'.
 void TextBook::appendCodepoint(Token& t, uint32_t cp) {
-  const char* s = nullptr;
-  char one[2] = {0, 0};
-  switch (cp) {
-    case 0x2018: case 0x2019: case 0x201A: case 0x2032: s = "'"; break;    // curly single quotes
-    case 0x201C: case 0x201D: case 0x201E: case 0x2033: s = "\""; break;   // curly double quotes
-    case 0x2013: s = "-"; break;                                          // en dash
-    case 0x2014: case 0x2015: s = "--"; break;                            // em dash
-    case 0x2026: s = "..."; break;                                        // ellipsis
-    case 0x2122: s = "(TM)"; break;
-    case 0x2022: s = "*"; break;
-    default:
-      if (cp < 0x80) {
-        one[0] = char(cp);
-      } else if (cp >= 0xC0 && cp <= 0xFF) {  // Latin-1 letters: drop the accent
-        one[0] = "AAAAAAACEEEEIIIIDNOOOOOxOUUUUYPsaaaaaaaceeeeiiiidnooooo/ouuuuypy"[cp - 0xC0];
-      } else {
-        one[0] = '?';
-      }
-      s = one;
+  // cp1252 bytes 0x80..0x9F -> their Unicode code points (0 = unused byte)
+  static const uint16_t C1[32] = {
+      0x20AC, 0,      0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,  // 0x80
+      0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0,      0x017D, 0,       // 0x88
+      0,      0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,  // 0x90
+      0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0,      0x017E, 0x0178,  // 0x98
+  };
+  uint8_t b = '?';
+  if (cp < 0x80 || (cp >= 0xA0 && cp <= 0xFF)) {
+    b = uint8_t(cp);
+  } else {
+    for (int i = 0; i < 32; i++)  // reverse lookup in the 32-entry table
+      if (C1[i] == cp) b = uint8_t(0x80 + i);
   }
-  for (; *s && t.len < sizeof(t.text) - 1; s++) t.text[t.len++] = *s;
+  if (t.len < sizeof(t.text) - 1) t.text[t.len++] = char(b);
 }
 
 TextBook::Token TextBook::nextToken() {
@@ -244,6 +242,13 @@ int TextBook::buildIndex(const Layout& layout) {
   return pageStarts.size();
 }
 
+int TextBook::pageForOffset(uint32_t offset) const {
+  // pageStarts is sorted, so binary-search for the last start <= offset
+  // (Python: bisect.bisect_right(pageStarts, offset) - 1).
+  const auto it = std::upper_bound(pageStarts.begin(), pageStarts.end(), offset);
+  return it == pageStarts.begin() ? 0 : int(it - pageStarts.begin()) - 1;
+}
+
 void TextBook::drawPage(GFXcanvas1& canvas, const Layout& layout, int n) {
   if (n < 0 || n >= (int)pageStarts.size()) return;
   layoutPage(pageStarts[n], layout, &canvas);
@@ -252,7 +257,7 @@ void TextBook::drawPage(GFXcanvas1& canvas, const Layout& layout, int n) {
 // ------------------------------------------------------------ index cache ---
 
 namespace {
-constexpr uint32_t IDX_MAGIC = 0x58444931;  // "1IDX" little-endian; bump the digit on format changes
+constexpr uint32_t IDX_MAGIC = 0x58444932;  // "2IDX" (v2: cp1252 tokens) little-endian; bump the digit on format changes
 
 // File layout: header, title bytes, then pageCount uint32 offsets.
 struct IdxHeader {

@@ -6,6 +6,7 @@
 //   hold Right / Left -> jump 10 pages
 //   Back tap -> HALF clean-up        Back hold -> RESYNC clean-up
 //   hold Power -> sleep now (also after 5 min idle)
+//   tap Confirm -> cycle text size (28/32/36/40 px), keeps your place
 //   hold Confirm -> power bench (battery only, ~2.5 min; results on screen + NVS)
 // Idle on battery: light sleep in 50 ms steps (bench: 20.8 mA -> 2.0 mA).
 // The current page is saved in flash (NVS) so the book reopens where you were.
@@ -29,6 +30,10 @@
 #include "battery.h"
 #include "board_pins.h"
 #include "buttons.h"
+#include "NotoSerif28.h"
+#include "NotoSerif32.h"
+#include "NotoSerif36.h"
+#include "NotoSerif40.h"
 #include "epd_uc8253.h"
 #include "power_bench.h"
 #include "text_book.h"
@@ -49,8 +54,18 @@ constexpr uint32_t SLEEP_AFTER_MS = 5 * 60 * 1000;  // auto power-off when idle
 
 // Portrait page geometry (528 x 792; the bezel hides 3 px per side).
 constexpr int PW = 528, PH = 792;
-const TextBook::Layout LAYOUT = {
-    &FreeSerif12pt7b,
+// Body text sizes (Noto Serif, cp1252 layout: real quotes/dashes/accents; tools/fontconvert.py).
+// The panel is ~257 ppi, so 28/32/36/40 px em ~ 8/9/10/11 pt.
+struct FontChoice {
+  const GFXfont* font;
+  int px;
+};
+const FontChoice FONTS[] = {{&NotoSerif28, 28}, {&NotoSerif32, 32}, {&NotoSerif36, 36}, {&NotoSerif40, 40}};
+constexpr int NUM_FONTS = sizeof(FONTS) / sizeof(FONTS[0]);
+int fontIndex = 0;  // 28 px: read best on the device (stage 9); choice saved in NVS "font"
+
+TextBook::Layout LAYOUT = {
+    FONTS[0].font,
     28, PW - 28,  // left, right
     58, PH - 44,  // top, bottom
     10,           // paragraph gap
@@ -68,7 +83,7 @@ int pagesUntilClean = CLEAN_EVERY;
 uint32_t lastActivity = 0;
 
 int pendingDelta = 0;
-bool pendingHalf = false, pendingResync = false, pendingSleep = false, pendingBench = false;
+bool pendingHalf = false, pendingResync = false, pendingSleep = false, pendingBench = false, pendingFont = false;
 BatteryReading batt;
 uint32_t lastKeyEvent = 0;
 constexpr uint32_t LIGHT_SLEEP_MS = 50;      // bench: 2.0 mA (100 ms: 1.8 mA, not worth 2x latency)
@@ -98,6 +113,7 @@ void onButton(Button b, ButtonEvent e, uint32_t heldMs) {
     if (b == Button::Confirm) pendingBench = true;
   } else if (e == ButtonEvent::Released) {
     if (b == Button::Back && heldMs < Buttons::LONG_PRESS_MS) pendingHalf = true;
+    if (b == Button::Confirm && heldMs < Buttons::LONG_PRESS_MS) pendingFont = true;  // tap = act on release
   }
 }
 
@@ -142,7 +158,7 @@ void showPage(Mode mode) {
   Serial.printf("[%7lu] page %d/%d  layout %lu ms + %s %lu ms   batt %u%% %u mV %d mA\n", (unsigned long)millis(),
                 page + 1, book.pageCount(), (unsigned long)layoutMs, EpdUc8253::modeName(epd.stats.used),
                 (unsigned long)epd.stats.totalMs, batt.percent, batt.mV, batt.mA);
-  prefs.putInt("page", page);
+  prefs.putUInt("pos", book.pageStart(page));  // a byte offset survives font changes; a page number doesn't
   if (!timelineSaved) {
     // First page after boot: record the whole timeline (incl. the refresh) in NVS.
     mark("page shown");
@@ -194,6 +210,27 @@ String findBook() {
 }
 
 void whileRefreshing() { buttons.update(); }
+
+// Paginate the book for the current font: load "<book>.<px>.idx" or build + save it.
+int indexBook() {
+  const uint32_t t = millis();
+  const String cachePath = bookPath + "." + FONTS[fontIndex].px + ".idx";
+  const bool cached = book.loadIndex(SD, cachePath.c_str(), LAYOUT);
+  if (!cached) {
+    book.buildIndex(LAYOUT);
+    const bool saved = book.saveIndex(SD, cachePath.c_str(), LAYOUT);
+    Serial.printf("index cache %s -> %s\n", saved ? "written" : "WRITE FAILED", cachePath.c_str());
+  }
+  Serial.printf("%s @ %d px: \"%s\" -> %d pages, %s in %lu ms, free heap %lu\n", bookPath.c_str(),
+                FONTS[fontIndex].px, book.title().c_str(), book.pageCount(), cached ? "loaded from cache" : "indexed",
+                (unsigned long)(millis() - t), (unsigned long)ESP.getFreeHeap());
+  return book.pageCount();
+}
+
+void setFont(int i) {
+  fontIndex = i;
+  LAYOUT.font = FONTS[i].font;
+}
 
 // Text screen for the bench (portrait, small font), one HALF refresh.
 void benchScreen(const char* title, const String& body) {
@@ -337,27 +374,15 @@ void setup() {
   }
 
   mark("find");
-  const uint32_t t = millis();
-  const String cachePath = bookPath + ".idx";
-  int pages;
-  const bool cached = book.loadIndex(SD, cachePath.c_str(), LAYOUT);
-  if (cached) {
-    pages = book.pageCount();
-    mark("index cached");
-  } else {
-    pages = book.buildIndex(LAYOUT);
-    const bool saved = book.saveIndex(SD, cachePath.c_str(), LAYOUT);
-    mark("index built");
-    Serial.printf("index cache %s -> %s\n", saved ? "written" : "WRITE FAILED", cachePath.c_str());
-  }
-  Serial.printf("%s: \"%s\" -> %d pages, %s in %lu ms, free heap %lu\n", bookPath.c_str(), book.title().c_str(), pages,
-                cached ? "loaded from cache" : "indexed", (unsigned long)(millis() - t), (unsigned long)ESP.getFreeHeap());
+  prefs.begin("reader", false);
+  setFont(constrain(prefs.getUChar("font", 0), 0, NUM_FONTS - 1));
+  const int pages = indexBook();
+  mark("index");
 
   // Resume where we left off (only if it's the same book).
-  prefs.begin("reader", false);
   Serial.printf("previous wake timeline: %s\n", prefs.getString("wake", "(none)").c_str());
   Serial.printf("last power bench: %s\n", prefs.getString("bench", "(none)").c_str());
-  if (prefs.getString("book", "") == bookPath) page = prefs.getInt("page", 0);
+  if (prefs.getString("book", "") == bookPath) page = book.pageForOffset(prefs.getUInt("pos", 0));
   else prefs.putString("book", bookPath);
   page = constrain(page, 0, pages - 1);  // Python: min(max(page, 0), pages - 1)
 
@@ -380,6 +405,15 @@ void loop() {
     goToSleep("Power held");
   } else if (millis() - lastActivity > SLEEP_AFTER_MS) {
     goToSleep("idle");
+  } else if (pendingFont) {
+    pendingFont = false;
+    const uint32_t pos = book.pageStart(page);  // first word on screen
+    setFont((fontIndex + 1) % NUM_FONTS);
+    prefs.putUChar("font", fontIndex);
+    indexBook();
+    page = book.pageForOffset(pos);  // the page that now contains that word
+    pagesUntilClean = CLEAN_EVERY;
+    showPage(Mode::Half);  // whole layout changed: HALF drives every pixel
   } else if (pendingBench) {
     pendingBench = false;
     runBench();
@@ -411,7 +445,7 @@ void loop() {
   // Idle: light sleep instead of spinning, unless a computer is on the USB bus
   // (light sleep would drop the link, G17e) or a key is being handled.
   const bool idle = !buttons.busy() && millis() - lastKeyEvent > STAY_AWAKE_AFTER_KEY_MS && !pendingSleep &&
-                    !pendingBench && !pendingResync && !pendingHalf && pendingDelta == 0;
+                    !pendingBench && !pendingFont && !pendingResync && !pendingHalf && pendingDelta == 0;
   if (idle && !HWCDC::isPlugged()) power_bench::lightSleep(LIGHT_SLEEP_MS);
   else delay(1);
 }

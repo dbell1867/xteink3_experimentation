@@ -1,5 +1,5 @@
 // Plain-text book: streams a UTF-8 .txt from the SD card and lays it out in
-// pages. Handles Project Gutenberg files (hard-wrapped lines, blank line =
+// pages in a cp1252-encoded GFX font. Handles Project Gutenberg files (hard-wrapped lines, blank line =
 // new paragraph, licence header/footer skipped).
 #pragma once
 #include <Adafruit_GFX.h>
@@ -33,11 +33,16 @@ class TextBook {
   bool saveIndex(fs::FS& fs, const char* cachePath, const Layout& layout);
   int pageCount() const { return pageStarts.size(); }
 
+  // Byte offset where page n starts, and the page containing a byte offset:
+  // together they keep your place when a font change re-paginates the book.
+  uint32_t pageStart(int n) const { return pageStarts[n]; }
+  int pageForOffset(uint32_t offset) const;
+
   // Draw page n (0-based) onto the canvas.
   void drawPage(GFXcanvas1& canvas, const Layout& layout, int n);
 
  private:
-  // One word (already converted to ASCII) or a paragraph break.
+  // One word (already converted to cp1252 bytes, see appendCodepoint) or a paragraph break.
   struct Token {
     enum Kind { Word, Paragraph, End } kind;
     uint32_t offset;  // byte offset in the file where it starts

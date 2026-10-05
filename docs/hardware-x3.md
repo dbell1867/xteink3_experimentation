@@ -113,6 +113,16 @@ Within ~30 counts of X4 → CrossPoint thresholds (3100/2090/750, 1120) apply; a
 - Our reader: `/books/*.txt` (or root). Alice (174 KB) → 156 pages, exactly as the host Python simulation predicted;
   indexing 596 ms, page layout 46 ms, free heap 197 KB after indexing.
 
+## Typography (stage 9)
+- Panel ≈ 257 ppi (792×528; assumes 3.7" diagonal, unconfirmed). Adafruit GFX addresses 256 glyphs (`write(uint8_t)`),
+  so fonts are generated in **cp1252 order** (Latin-1 + curly quotes/dashes/ellipsis in 0x80–0x9F) by
+  `tools/fontconvert.py` (FreeType, hinted 1-bit), and the tokenizer maps UTF-8 → cp1252.
+- Noto Serif (OFL 1.1, fonts/OFL.txt). Sizes 28/32/36/40 px ≈ 8/9/10/11 pt; **28 px chosen** by eye.
+  First try (21 px ≈ 6 pt, matched FreeSerif's pixel size) was far too small.
+- Alice pages: 21 px 159, 28 px 268, 32 px 353, 36 px 436, 40 px 533 — every device count matched the host simulation.
+  Per-size index caches `/books/alice.txt.<px>.idx` (first build ~0.9 s, cached 5 ms). Reading position stored as a
+  byte offset (NVS "pos") so a size change keeps your place.
+
 ## Unknowns / to verify
 - Earlier USB drops = magnetic cable detaching. One reboot (10:35:49) still unexplained.
 - Is −20 mA on USB = charge terminated, battery feeding system?

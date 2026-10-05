@@ -1,0 +1,25 @@
+13:39:20 [13:39:20] -- port up --
+13:39:49 [13:39:49] [  33561] idle: panel rails off
+13:43:01 [13:43:01] -- port gone (asleep) --
+13:43:03 [13:43:03] -- port up --
+13:43:07 [13:43:07] index cache written -> /books/alice.txt.36.idx
+13:43:07 [13:43:07] /books/alice.txt @ 36 px: "Alice's Adventures in Wonderland" -> 436 pages, indexed in 830 ms, free heap 190880
+13:43:08 [13:43:08] [ 233107] page 1/436  layout 49 ms + HALF 870 ms   batt 100% 4383 mV 95 mA
+13:43:12 [13:43:12] index cache written -> /books/alice.txt.40.idx
+13:43:12 [13:43:12] /books/alice.txt @ 40 px: "Alice's Adventures in Wonderland" -> 533 pages, indexed in 866 ms, free heap 188704
+13:43:12 [13:43:12] [ 237330] page 1/533  layout 49 ms + HALF 744 ms   batt 100% 4384 mV 88 mA
+13:43:15 [13:43:15] index cache written -> /books/alice.txt.28.idx
+13:43:15 [13:43:15] /books/alice.txt @ 28 px: "Alice's Adventures in Wonderland" -> 268 pages, indexed in 953 ms, free heap 188704
+13:43:16 [13:43:16] [ 240806] page 1/268  layout 47 ms + HALF 744 ms   batt 100% 4383 mV 84 mA
+13:43:32 [13:43:32] n Wonderland" -> 353 pages, loaded from cache in 4 ms, free heap 188704
+13:43:32 [13:43:32] [ 257360] page 1/353  layout 47 ms + HALF 744 ms   batt 100% 4384 mV 76 mA
+13:43:33 [13:43:33] /books/alice.txt @ 36 px: "Alice's Adventures in Wonderland" -> 436 pages, loaded from cache in 4 ms, free heap 188704
+13:43:34 [13:43:34] [ 259022] page 1/436  layout 46 ms + HALF 744 ms   batt 100% 4380 mV 72 mA
+13:43:34 [13:43:34] /books/alice.txt @ 40 px: "Alice's Adventures in Wonderland" -> 533 pages, loaded from cache in 5 ms, free heap 188704
+13:43:35 [13:43:35] [ 259869] page 1/533  layout 45 ms + HALF 744 ms   batt 100% 4381 mV 71 mA
+13:43:35 [13:43:35] /books/alice.txt @ 28 px: "Alice's Adventures in Wonderland" -> 268 pages, loaded from cache in 5 ms, free heap 188704
+13:43:36 [13:43:36] [ 260754] page 1/268  layout 44 ms + HALF 744 ms   batt 100% 4384 mV 71 mA
+13:44:01 [13:44:01] -- port gone (asleep) --
+13:44:02 [13:44:02] -- port up --
+13:44:04 [13:44:04] [ 288474] page 2/268  layout 48 ms + FAST 468 ms   batt 100% 4386 mV 68 mA
+13:44:34 [13:44:34] [ 318529] idle: panel rails off
