@@ -1,10 +1,11 @@
 # Xteink X3 bring-up — plan
 
 ## Resume here
-- **Position:** Stage 11 (faster wake) **done** — snapshot stages/11-faster-wake. Battery wake: visible 0.83 s, ready 1.10 s.
-- **src/:** + wake_frame.{h,cpp} (page saved raw in spiffs partition at sleep); driver refreshStart/refreshFinish
-  split + BUSY-rise ISR; main starts the saved frame before mounting SD.
-- **Next (pick):** long-press redesign (open question), .xtc support, or housekeeping (G55, G7, lesson docs).
+- **Position:** Housekeeping **done** after stage 11: lessons written, editor fixed (.clangd), G55 in the skill.
+- **Lessons:** docs/lesson-01-identify-backup-probe.md, -02-epaper, -03-buttons, -04-reader, -05-power.
+- **Parked:** long-press redesign (see open questions).
+- **Next (pick):** .xtc support, long-press redesign, or anything new.
+- **Editor:** `pio run -t compiledb` + `.clangd` (RISC-V include dirs); `clangd --check=src/main.cpp` -> 0 errors.
 - **Git:** commit per stage locally; the USER pushes (never push — see memory).
 - **Workflow notes:** stop any follow_serial capture before uploading (it holds the port); don't `pkill -f` a pattern
   that's in your own shell's command line. When copying to SD: /books at card ROOT, and eject before removing.
@@ -41,6 +42,8 @@
 16. Stage 11 faster wake: hypothesis "25 MHz fails cold" falsified (card's own 648 ms init). Saved frame + refresh
     overlapping SD: visible 1.82 -> 0.83 s; settle via BUSY ISR: ready 1.30 -> 1.10 s (predicted 1.10).
     Two user tests didn't reach the new code (ran before flash / no unplug) — confirm via kernel USB log + NVS markers.
+17. Housekeeping: 5 lesson docs; .clangd for the C3 (thousands of clangd errors -> 0); skill updated:
+    G55 (QIO/DIO boot loop), G43 RISC-V variant, G42 X3 example, template note.
 
 ## Decisions
 - C++ / Arduino core 3.x via pioarduino — stock fw is also Arduino-ESP32, CrossPoint proves the platform on this device.
@@ -48,7 +51,7 @@
 - Display driver choice deferred until the controller probe says UC8253 or UC8279d.
 
 ## Open questions
-- Long-press on page keys fires the 1-page turn first, then the +10 jump (jarring). Options discussed 2026-10-05:
+- (PARKED 2026-10-05) Long-press on page keys fires the 1-page turn first, then the +10 jump (jarring). Options discussed 2026-10-05:
   A act-on-release (clean, but +~190 ms per turn: measured taps 130-240 ms), B press + auto-repeat for page keys,
   C separate jump gesture, D delayed refresh (rejected). Leaning: per-key policy (page keys B, Back/Power A).
   Decision: keep as-is for now; revisit (option: side-by-side A/B test on device).

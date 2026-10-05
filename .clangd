@@ -1,0 +1,16 @@
+# clangd setup for the ESP32-C3 (RISC-V) toolchain — skill G7/G43, C3 variant.
+# compile_commands.json comes from: pio run -t compiledb
+# clang accepts the RISC-V GCC flags but can't find GCC's own C++ headers,
+# so add the dirs from: riscv32-esp-elf-g++ -march=rv32imc_zicsr_zifencei -mabi=ilp32 -x c++ -E -v -
+# (machine-specific absolute paths; regenerate if the toolchain version changes)
+CompileFlags:
+  Remove: [-fstrict-volatile-bitfields, -fno-tree-switch-conversion]  # GCC-only; clang rejects them
+  Add:
+    - -isystem/home/dcbmah/.platformio/packages/toolchain-riscv32-esp/riscv32-esp-elf/include/c++/14.2.0
+    - -isystem/home/dcbmah/.platformio/packages/toolchain-riscv32-esp/riscv32-esp-elf/include/c++/14.2.0/riscv32-esp-elf/rv32imc_zicsr_zifencei/ilp32
+    - -isystem/home/dcbmah/.platformio/packages/toolchain-riscv32-esp/riscv32-esp-elf/include/c++/14.2.0/backward
+    - -isystem/home/dcbmah/.platformio/packages/toolchain-riscv32-esp/lib/gcc/riscv32-esp-elf/14.2.0/include
+    - -isystem/home/dcbmah/.platformio/packages/toolchain-riscv32-esp/lib/gcc/riscv32-esp-elf/14.2.0/include-fixed
+    - -isystem/home/dcbmah/.platformio/packages/toolchain-riscv32-esp/riscv32-esp-elf/include
+Diagnostics:
+  Suppress: [drv_unknown_argument, drv_unknown_argument_with_suggestion]
