@@ -45,11 +45,11 @@
 16. Stage 11 faster wake: hypothesis "25 MHz fails cold" falsified (card's own 648 ms init). Saved frame + refresh
     overlapping SD: visible 1.82 -> 0.83 s; settle via BUSY ISR: ready 1.30 -> 1.10 s (predicted 1.10).
     Two user tests didn't reach the new code (ran before flash / no unplug) — confirm via kernel USB log + NVS markers.
+17. Housekeeping: 5 lesson docs; .clangd for the C3 (thousands of clangd errors -> 0); skill updated:
+    G55 (QIO/DIO boot loop), G43 RISC-V variant, G42 X3 example, template note.
 18. Stage 12 XTC lessons: PC renders Markdown -> 1-bit landscape pages (same FreeType mono as the device fonts),
     exports Xteink XTC (format from CrossPoint); independent checker: 0 mismatches over 67 pages. X3 viewer + menu
     orientation setting; tables readable at 25 px; keys-left preferred, lower key = next.
-17. Housekeeping: 5 lesson docs; .clangd for the C3 (thousands of clangd errors -> 0); skill updated:
-    G55 (QIO/DIO boot loop), G43 RISC-V variant, G42 X3 example, template note.
 
 ## Decisions
 - C++ / Arduino core 3.x via pioarduino — stock fw is also Arduino-ESP32, CrossPoint proves the platform on this device.
