@@ -62,6 +62,11 @@ How Xteink's stock fw drives its 'normal' LUTs is unknown — the SDK only uses 
   `/books/<book>.idx` (−~700 incl. file scan), HALF instead of RESYNC after a clean sleep (−1500; no flash, clean).
   Remaining: SD cold start 648 ms (47 ms when the card stayed powered), HALF 870, display init 223.
   Data: docs/data/wake-timeline-x3.csv.
+- **Stage 11:** at sleep the clean page is saved raw into the unused `spiffs` partition (239 ms incl. erase); at a
+  clean wake it's loaded and the HALF refresh starts at 376 ms, the SD cold start (648 ms, the card's own init —
+  a failed 25 MHz try was ruled out) runs during the waveform. Settle (200 ms) counted from the BUSY rising edge
+  (ISR timestamp). Battery wake: **page visible ≈ 0.83 s, ready 1.10 s** (was 1.84 s).
+  `esp_rtc_get_time_us()` at setup reads ≈ millis() even on power-on → doesn't measure ROM/bootloader time.
 - BQ27220 battery gauge (0x55): awake draw **−21 mA on battery**, −22 mA on USB once charge terminated at 100 %
   (battery feeds the board even on USB — like skill G50). After any reset/power cycle on USB the charger
   restarts a top-off: +83 → +65 mA. Current sign is the only USB/charge hint on the X3 (no VBUS pin).

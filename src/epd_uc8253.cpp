@@ -36,6 +36,20 @@ constexpr uint8_t CMD_PARTIAL_OUT = 0x92;
 const SPISettings kSpi(10000000, MSBFIRST, SPI_MODE0);  // 10 MHz, as the X3 board profile
 }  // namespace
 
+// BUSY rising edge = waveform finished. Timestamped by an interrupt (skill
+// G46), so refreshFinish() knows how much of the settle time has already
+// passed while the caller was busy (e.g. mounting the SD card).
+namespace {
+volatile uint32_t busyRoseAtMs = 0;
+volatile bool busyRose = false;
+void IRAM_ATTR onBusyRise() {  // ISR: keep it tiny, no Serial/SPI here
+  if (!busyRose) {
+    busyRoseAtMs = millis();
+    busyRose = true;
+  }
+}
+}  // namespace
+
 // ------------------------------------------------------------ low level ---
 
 void EpdUc8253::cmd(uint8_t c) {
@@ -207,7 +221,13 @@ const char* EpdUc8253::modeName(Mode m) {
 }
 
 void EpdUc8253::refresh(const uint8_t* fb, Mode mode) {
-  using namespace uc8253;  // lets us write LUT_FULL_WW instead of uc8253::LUT_FULL_WW
+  refreshStart(fb, mode);
+  refreshFinish();
+}
+
+void EpdUc8253::refreshStart(const uint8_t* fb, Mode mode) {
+  using namespace uc8253;
+  if (pending.active) refreshFinish();  // never overlap two refreshes  // lets us write LUT_FULL_WW instead of uc8253::LUT_FULL_WW
   static const LutBank FULL = {LUT_FULL_VCOM, LUT_FULL_WW, LUT_FULL_BW, LUT_FULL_WB, LUT_FULL_BB};
   static const LutBank HALF = {LUT_HALF_VCOM, LUT_HALF_WW, LUT_HALF_BW, LUT_HALF_WB, LUT_HALF_BB};
   static const LutBank NORMAL = {LUT_NORMAL_VCOM, LUT_NORMAL_WW, LUT_NORMAL_BW, LUT_NORMAL_WB, LUT_NORMAL_BB};
@@ -261,13 +281,41 @@ void EpdUc8253::refresh(const uint8_t* fb, Mode mode) {
   }
   stats.uploadMs = millis() - t0;
 
-  // 2. The visible part
+  // 2. The visible part: start the waveform and return once it is running.
   stats.powerOnMs = powerOnIfNeeded();
-  stats.waveformMs = runWaveform();
+  cmd(CMD_DISPLAY_REFRESH);
+  const uint32_t tw = millis();
+  while (digitalRead(pins::EPD_BUSY) == HIGH && millis() - tw < 1000) idle();  // BUSY LOW = started
+  busyRose = false;
+  attachInterrupt(digitalPinToInterrupt(pins::EPD_BUSY), onBusyRise, RISING);
+  pending = {true, fb, mode, conditioning, t0, tw};
+}
+
+void EpdUc8253::refreshFinish() {
+  if (!pending.active) return;
+  pending.active = false;
+  const uint8_t* fb = pending.fb;
+  const Mode mode = pending.mode;
+  const bool conditioning = pending.conditioning;
+  const uint32_t t0 = pending.t0;
+  static const LutBank NORMAL = {uc8253::LUT_NORMAL_VCOM, uc8253::LUT_NORMAL_WW, uc8253::LUT_NORMAL_BW,
+                                 uc8253::LUT_NORMAL_WB, uc8253::LUT_NORMAL_BB};
+  static const LutBank FAST = {uc8253::LUT_FAST_VCOM, uc8253::LUT_FAST_WW, uc8253::LUT_FAST_BW, uc8253::LUT_FAST_WB,
+                               uc8253::LUT_FAST_BB};
+
+  while (digitalRead(pins::EPD_BUSY) == LOW && millis() - pending.tWave < 30000) idle();  // BUSY HIGH = done
+  detachInterrupt(digitalPinToInterrupt(pins::EPD_BUSY));
+  const uint32_t endedAt = busyRose ? busyRoseAtMs : millis();  // exact end, even if we came late
+  stats.waveformMs = endedAt - pending.tWave;
   const uint32_t t1 = millis();
 
   // 3. Housekeeping so the NEXT differential refresh is clean
-  if (mode != Mode::Fast) delay(200);  // SDK settle after non-turbo waveforms
+  if (mode != Mode::Fast) {
+    // SDK: settle 200 ms after non-turbo waveforms -- counted from the waveform's
+    // end, so time the caller already spent elsewhere counts too.
+    const uint32_t since = millis() - endedAt;
+    if (since < 200) delay(200 - since);
+  }
 
   if (conditioning) {
     // RESYNC, or the first FULL after begin(): one OEM "normal" conditioning pass.

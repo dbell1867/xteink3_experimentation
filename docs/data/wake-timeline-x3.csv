@@ -7,3 +7,13 @@ index,599,599,3,3
 layout + first refresh,2456,2456,2453,940
 total app start -> page shown,3491,5082,2751,1839
 first refresh mode,RESYNC,RESYNC,RESYNC,HALF (clean wake)
+
+# stage 11 (battery wake, cold SD): saved frame in flash -> HALF starts before SD init
+phase,stage11a_ms,stage11b_ms
+display init done,194,193
+frame started (refresh running),377,376
+sd mount done (cold card),1025,1024
+find + index (cache),1058,1058
+ready (finish: settle+DTM1 sync),1302,1103
+page visible (frame start + 454 ms waveform),~831,~830
+frame save at sleep,236,239

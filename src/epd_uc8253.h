@@ -30,7 +30,7 @@ class EpdUc8253 {
     const char* why = "";     // reason for an upgrade
     uint32_t uploadMs = 0;    // LUTs + image over SPI
     uint32_t powerOnMs = 0;   // 0 if the rails were already on
-    uint32_t waveformMs = 0;  // the visible refresh (BUSY low)
+    uint32_t waveformMs = 0;  // the visible refresh (BUSY low); an upper bound if the caller finished late
     uint32_t extraMs = 0;     // settle delay, conditioning passes, DTM1 sync
     uint32_t totalMs = 0;
   };
@@ -39,7 +39,15 @@ class EpdUc8253 {
 
   // Show a frame. fb: HEIGHT rows of ROW_BYTES, MSB = leftmost pixel, 1 = white.
   // Leaves the panel's high-voltage rails ON; call powerOff() when idle.
-  void refresh(const uint8_t* fb, Mode mode);
+  void refresh(const uint8_t* fb, Mode mode);  // = refreshStart() + refreshFinish()
+
+  // Split refresh (as freeink-sdk's displayStart/displayFinish): start returns
+  // once the waveform is running (BUSY went LOW), so the caller can do other
+  // work during the ~0.5 s the panel draws on its own -- including using the
+  // SPI bus for the SD card (separate chip-select). Until refreshFinish(),
+  // don't touch `fb` (finish syncs it into the old-frame RAM) or this driver.
+  void refreshStart(const uint8_t* fb, Mode mode);
+  void refreshFinish();
   void powerOff();
   void powerOn() { powerOnIfNeeded(); }  // raise the panel's high-voltage rails
   // Rails off + controller deep sleep (cmd 0x07, 0xA5). The image stays on the
@@ -61,6 +69,15 @@ class EpdUc8253 {
     const uint8_t* wb;
     const uint8_t* bb;
   };
+
+  // State carried from refreshStart() to refreshFinish()
+  struct Pending {
+    bool active = false;
+    const uint8_t* fb = nullptr;
+    Mode mode = Mode::Full;
+    bool conditioning = false;
+    uint32_t t0 = 0, tWave = 0;
+  } pending;
 
   bool isPowered = false;
   bool oldPlaneValid = false;  // DTM1 holds what's on the glass

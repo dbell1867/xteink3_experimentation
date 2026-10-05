@@ -28,6 +28,7 @@
 #include <SPI.h>
 #include <driver/gpio.h>
 #include <esp_rom_crc.h>
+#include <esp_rtc_time.h>
 #include <esp_sleep.h>
 #include <esp_system.h>
 
@@ -45,6 +46,7 @@
 #include "epd_uc8253.h"
 #include "power_bench.h"
 #include "text_book.h"
+#include "wake_frame.h"
 
 using Mode = EpdUc8253::Mode;
 
@@ -61,6 +63,7 @@ constexpr int CLEAN_EVERY = 15;
 constexpr uint32_t SLEEP_AFTER_MS = 5 * 60 * 1000;  // auto power-off when idle
 constexpr uint32_t LIGHT_SLEEP_MS = 50;            // bench: 2.0 mA (100 ms: 1.8 mA, not worth 2x latency)
 constexpr uint32_t STAY_AWAKE_AFTER_KEY_MS = 300;
+constexpr size_t FB_LEN = EpdUc8253::ROW_BYTES * EpdUc8253::HEIGHT;  // 52,272 bytes
 
 // Portrait page geometry (528 x 792; the bezel hides 3 px per side).
 constexpr int PW = 528, PH = 792;
@@ -92,11 +95,12 @@ struct Mark {
   const char* name;
   uint32_t ms;
 };
-Mark marks[8];
+Mark marks[12];
 int numMarks = 0;
 void mark(const char* name) {
-  if (numMarks < 8) marks[numMarks++] = {name, millis()};
+  if (numMarks < 12) marks[numMarks++] = {name, millis()};
 }
+uint32_t bootRomMs = 0;  // RTC time at setup() = ROM + bootloader + app start (RTC timer starts at power-on)
 bool timelineSaved = false;
 bool showBootInfo = true;  // first page after boot shows boot # / reset reason in the header
 
@@ -222,6 +226,22 @@ void renderPage() {
 
 void savePosition() { prefs.putUInt(posKey(bookPath).c_str(), book.pageStart(page)); }
 
+wake_frame::Meta frameMeta(const String& path, uint32_t pos) {
+  return {esp_rom_crc32_le(0, (const uint8_t*)path.c_str(), path.length()), pos, (uint8_t)FONTS[fontIndex].px};
+}
+
+// First screen after boot: record the boot timeline (incl. the refresh) in NVS.
+void saveTimeline(const char* refreshInfo) {
+  if (timelineSaved) return;
+  mark("page shown");
+  String t = "rtc@setup=" + String(bootRomMs) + " ";
+  for (int i = 0; i < numMarks; i++) t += String(marks[i].name) + "=" + marks[i].ms + " ";
+  t += String("(") + refreshInfo + ")";
+  prefs.putString("wake", t);
+  Serial.printf("wake timeline: %s\n", t.c_str());
+  timelineSaved = true;
+}
+
 void showPage(Mode mode) {
   const uint32_t t0 = millis();
   renderPage();
@@ -231,15 +251,7 @@ void showPage(Mode mode) {
                 book.pageCount(), (unsigned long)layoutMs, EpdUc8253::modeName(epd.stats.used),
                 (unsigned long)epd.stats.totalMs, batt.percent, batt.mA);
   savePosition();
-  if (!timelineSaved) {
-    mark("page shown");
-    String t;
-    for (int i = 0; i < numMarks; i++) t += String(marks[i].name) + "=" + marks[i].ms + " ";
-    t += "(" + String(EpdUc8253::modeName(epd.stats.used)) + " " + epd.stats.totalMs + " ms)";
-    prefs.putString("wake", t);
-    Serial.printf("wake timeline: %s\n", t.c_str());
-    timelineSaved = true;
-  }
+  saveTimeline((String(EpdUc8253::modeName(epd.stats.used)) + " " + epd.stats.totalMs + " ms").c_str());
   showBootInfo = false;
   lastActivity = millis();
 }
@@ -481,6 +493,11 @@ void goToSleep(const char* why) {
   if (book.pageCount() > 0) {
     screen = Screen::Reading;
     renderPage();
+    // Keep the clean page (no banner) in flash: the next wake can show it
+    // before the SD card has started.
+    const uint32_t t = millis();
+    const bool ok = wake_frame::save(canvas.getBuffer(), FB_LEN, frameMeta(bookPath, book.pageStart(page)));
+    prefs.putString("frameSave", String(ok ? "ok " : "FAILED ") + (millis() - t) + " ms");
     canvas.fillRect(28, PH - 80, PW - 56, 44, WHITE);
     canvas.drawRect(28, PH - 80, PW - 56, 44, BLACK);
     canvas.setFont(UI_FONT);
@@ -640,6 +657,7 @@ void setup() {
   pinMode(pins::SD_POWER, OUTPUT);
   digitalWrite(pins::SD_POWER, HIGH);
 
+  bootRomMs = esp_rtc_get_time_us() / 1000;
   mark("setup");
   const esp_reset_reason_t resetReason = esp_reset_reason();
   const bool wakeBoot = (resetReason == ESP_RST_POWERON || resetReason == ESP_RST_DEEPSLEEP);
@@ -655,43 +673,74 @@ void setup() {
   bootCount++;
   Serial.printf("\n=== Xteink X3 stage 10: reader === boot #%lu, reset reason %d, wake cause %d\n",
                 (unsigned long)bootCount, (int)resetReason, (int)esp_sleep_get_wakeup_cause());
-  delay(50);  // let the SD card's supply settle
+  // NVS first: a clean wake needs the book/position/font to validate the saved frame.
+  prefs.begin("reader", false);
+  Serial.printf("previous wake timeline: %s\n", prefs.getString("wake", "(none)").c_str());
+  Serial.printf("last frame save at sleep: %s\n", prefs.getString("frameSave", "(none)").c_str());
+  setFont(constrain(prefs.getUChar("font", 0), 0, NUM_FONTS - 1));
+  const bool cleanWake = wakeBoot && prefs.getBool("cleanSleep", false);
+  if (prefs.getBool("cleanSleep", false)) prefs.putBool("cleanSleep", false);
+  const String lastBook = prefs.getString("book", "");
 
   battery::begin();
   batt = battery::read();
   buttons.begin(onButton);
+  mark("gauge+keys");
   epd.begin();  // display first: it owns the SPI bus
   epd.setIdleHook(whileRefreshing);
-
   mark("display");
-  const bool sdOk = SD.begin(pins::SD_CS, SPI, 25000000) || SD.begin(pins::SD_CS, SPI, 4000000);
-  mark("sd mount");
+
+  // Fast wake: show the page saved at sleep NOW, and let the SD card start up
+  // (~650 ms cold) while the panel draws it (~450 ms waveform, CPU/bus free).
+  bool frameStarted = false;
+  if (cleanWake && !lastBook.isEmpty() &&
+      wake_frame::load(canvas.getBuffer(), FB_LEN, frameMeta(lastBook, prefs.getUInt(posKey(lastBook).c_str(), 0)))) {
+    epd.refreshStart(canvas.getBuffer(), Mode::Half);
+    frameStarted = true;
+    mark("frame started");
+  }
+
+  // Timed separately: is a slow cold mount the card itself, or a failed 25 MHz try?
+  bool sdOk = SD.begin(pins::SD_CS, SPI, 25000000);
+  mark(sdOk ? "sd@25M ok" : "sd@25M FAIL");
   if (!sdOk) {
+    SD.end();
+    sdOk = SD.begin(pins::SD_CS, SPI, 4000000);
+    mark(sdOk ? "sd@4M ok" : "sd@4M FAIL");
+  }
+  if (!sdOk) {
+    epd.refreshFinish();
     message("No SD card found.", "Insert a FAT32 card and reset.");
     return;
   }
-  prefs.begin("reader", false);
-  Serial.printf("previous wake timeline: %s\n", prefs.getString("wake", "(none)").c_str());
-  setFont(constrain(prefs.getUChar("font", 0), 0, NUM_FONTS - 1));
 
   findBooks();
   if (bookPaths.empty()) {
+    epd.refreshFinish();
     message("No .txt book found.", "Copy one into /books on the card.");
     return;
   }
   mark("find");
   // Reopen the last book if it's still on the card, else the first one.
-  String last = prefs.getString("book", "");
+  String last = lastBook;
   if (std::find(bookPaths.begin(), bookPaths.end(), last) == bookPaths.end()) last = bookPaths[0];
-  if (!openBook(last)) {
+  const bool opened = openBook(last);
+  mark("index");
+
+  if (frameStarted) {
+    epd.refreshFinish();  // the saved page is on the glass; usually already done
+    char info[48];
+    snprintf(info, sizeof(info), "saved frame, HALF %lu ms", (unsigned long)epd.stats.totalMs);
+    saveTimeline(info);
+    showBootInfo = false;
+    lastActivity = millis();
+    if (opened && last == lastBook) return;  // the frame is exactly this page
+  }
+  if (!opened) {
     message("Could not open the book.", last.c_str());
     return;
   }
-  mark("index");
-
   // Woke from OUR sleep: the glass shows a clean page + banner, so HALF is enough.
-  const bool cleanWake = wakeBoot && prefs.getBool("cleanSleep", false);
-  if (prefs.getBool("cleanSleep", false)) prefs.putBool("cleanSleep", false);
   showPage(cleanWake ? Mode::Half : Mode::Resync);
 }
 

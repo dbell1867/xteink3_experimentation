@@ -1,11 +1,10 @@
 # Xteink X3 bring-up — plan
 
 ## Resume here
-- **Position:** Stage 10 (navigation) **done** — snapshot stages/10-navigation. 3 books on SD (/books).
-- **src/:** main.cpp = screen state machine (Reading/Menu/Contents/Books) + key queue; text_book = chapters +
-  centred headings + v3 cache; tools/pagesim.py predicts pages/chapters on the host.
-- **Next (pick):** further wake gains (~0.5 s), long-press redesign (see open questions), .xtc support,
-  or housekeeping (G55 flash-mode gotcha, G7 editor fix, lesson docs).
+- **Position:** Stage 11 (faster wake) **done** — snapshot stages/11-faster-wake. Battery wake: visible 0.83 s, ready 1.10 s.
+- **src/:** + wake_frame.{h,cpp} (page saved raw in spiffs partition at sleep); driver refreshStart/refreshFinish
+  split + BUSY-rise ISR; main starts the saved frame before mounting SD.
+- **Next (pick):** long-press redesign (open question), .xtc support, or housekeeping (G55, G7, lesson docs).
 - **Git:** commit per stage locally; the USER pushes (never push — see memory).
 - **Workflow notes:** stop any follow_serial capture before uploading (it holds the port); don't `pkill -f` a pattern
   that's in your own shell's command line. When copying to SD: /books at card ROOT, and eject before removing.
@@ -39,6 +38,9 @@
     Page counts matched host sim exactly at every size. Licence check caught Arch's stale Apache file -> real OFL.
 15. Stage 10 navigation: menu on tap Back, contents (chapter detection), book picker, per-book positions, chapter
     page breaks + centred headings. Alice 276 p / 12 ch matched pagesim.py exactly.
+16. Stage 11 faster wake: hypothesis "25 MHz fails cold" falsified (card's own 648 ms init). Saved frame + refresh
+    overlapping SD: visible 1.82 -> 0.83 s; settle via BUSY ISR: ready 1.30 -> 1.10 s (predicted 1.10).
+    Two user tests didn't reach the new code (ran before flash / no unplug) — confirm via kernel USB log + NVS markers.
 
 ## Decisions
 - C++ / Arduino core 3.x via pioarduino — stock fw is also Arduino-ESP32, CrossPoint proves the platform on this device.
