@@ -1,14 +1,11 @@
 # Xteink X3 bring-up — plan
 
 ## Resume here
-- **Position:** Stage 7b (fast wake) **done** — snapshot stages/07b-fast-wake. Battery wake 5.08 s -> 1.84 s.
-- **src/:** main.cpp = reader + battery + power-off/deep sleep + wake timeline (NVS "wake", printed next boot);
-  text_book has index cache (<book>.idx, validated by book size + layout signature; bump IDX_MAGIC if tokenizer
-  rules change); driver allows HALF without an old frame. NVS "cleanSleep" flag -> HALF on wake.
-- **Possible further wake gains (~0.5 s total, diminishing):** overlap SD cold start with display init,
-  save sleep frame + FAST (CrossPoint way), skip RAM-plane clears on HALF wake.
-- **Next (pick):** light sleep between turns (21 mA awake), font with real quotes/accents, chapters + book
-  picker, or housekeeping (G55, G7, lesson docs).
+- **Position:** Stage 8 (light sleep) **done** — snapshot stages/08-light-sleep. Idle 20.8 mA -> 2.0 mA.
+- **src/:** reader + battery + power-off/deep sleep + fast wake + 50 ms light sleep when idle & no USB host;
+  power_bench.{h,cpp} (hold Confirm, battery only) measures 6 modes with the gauge; results in NVS "bench".
+- **Next (pick):** font with real quotes/accents, chapters + book picker, further wake gains (~0.5 s),
+  or housekeeping (G55 flash-mode gotcha, G7 editor fix, lesson docs). Project is in git (gitea) — commit per stage.
 - **Workflow notes:** stop any follow_serial capture before uploading (it holds the port); don't `pkill -f` a pattern
   that's in your own shell's command line. When copying to SD: /books at card ROOT, and eject before removing.
 
@@ -34,6 +31,8 @@
     USB -> deep sleep, wake on Power (reset 8, wake 7). Awake draw 21 mA (gauge). Wake-to-page 3.6 s.
 12. Stage 7b fast wake: measured first (timeline in NVS), then 3 fixes -> battery wake 5.08 -> 1.84 s (predicted ~1.8).
     Surprise: SD cold start 648 ms after battery power-off (GPIO13 also cuts SD power) vs 47 ms warm.
+13. Stage 8 light sleep: power bench on the gauge. 80 MHz saves little (pred. failed), light sleep 50 ms = 2.0 mA (10x),
+    panel rails on costs ~0 (pred. failed). Reader light-sleeps when idle; no felt latency, no missed presses.
 
 ## Decisions
 - C++ / Arduino core 3.x via pioarduino — stock fw is also Arduino-ESP32, CrossPoint proves the platform on this device.

@@ -1,0 +1,7 @@
+mode,run1_mA,run2_mA,predicted_mA,notes
+160 MHz delay(1),20.8,20.8,21,baseline reader loop
+80 MHz delay(1),17.6,17.6,14,prediction failed: APB stays 80 MHz
+40 MHz delay(1),11.5,11.4,10,
+light sleep 50ms,2.0,2.0,2,chosen; no felt latency or missed presses
+light sleep 100ms,1.8,1.9,1.5,floor ~1.6 mA (SD card on latch + chips); not worth 2x latency
+LS 50ms + panel rails on,,2.0,3-5,prediction failed: rails idle < ~0.5 mA (gauge resolution 1 mA)

@@ -66,6 +66,11 @@ How Xteink's stock fw drives its 'normal' LUTs is unknown — the SDK only uses 
   (battery feeds the board even on USB — like skill G50). After any reset/power cycle on USB the charger
   restarts a top-off: +83 → +65 mA. Current sign is the only USB/charge hint on the X3 (no VBUS pin).
 - ~21 mA awake on a 650 mAh cell ≈ 30 h awake; auto power-off after 5 min idle.
+- **Power bench (stage 8, BQ27220 1 s readings, 16 samples/mode, repeated twice):** 160 MHz 20.8 mA, 80 MHz 17.6,
+  40 MHz 11.5, light sleep 50 ms **2.0**, 100 ms 1.8, LS 50 ms + panel rails on 2.0. Floor ≈ 1.6 mA (SD card stays
+  powered on the GPIO13 latch). Reader now light-sleeps in 50 ms steps when idle and no USB host
+  (HWCDC::isPlugged()); ADC-ladder keys can't wake by GPIO level, so they're polled on each timer wake.
+  Data: docs/data/power-bench-x3.csv.
 
 ## Power — earlier observations
 - Unplugging USB (17 s) does **not** reset or power down the chip with our firmware: uptime continuous, boot # unchanged.

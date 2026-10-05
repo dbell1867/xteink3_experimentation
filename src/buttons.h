@@ -22,6 +22,10 @@ class Buttons {
   void begin(Handler handler);
   void update();  // call as often as you like; samples every SAMPLE_MS
 
+  // True while any key is down or a reading is still being debounced:
+  // the caller must keep sampling (no light sleep) until this is false.
+  bool busy() const;
+
   uint32_t glitches = 0;  // readings that changed but didn't last STABLE_MS
 
  private:

@@ -41,6 +41,7 @@ class EpdUc8253 {
   // Leaves the panel's high-voltage rails ON; call powerOff() when idle.
   void refresh(const uint8_t* fb, Mode mode);
   void powerOff();
+  void powerOn() { powerOnIfNeeded(); }  // raise the panel's high-voltage rails
   // Rails off + controller deep sleep (cmd 0x07, 0xA5). The image stays on the
   // glass. Needs begin() again (hardware reset) before the next refresh.
   void deepSleep();

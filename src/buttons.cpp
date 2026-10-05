@@ -59,6 +59,12 @@ void Buttons::update() {
   process(ch[2], pwr ? Button::Power : Button::None, pwr ? 0 : 1, now, "power");
 }
 
+bool Buttons::busy() const {
+  for (const Channel& c : ch)
+    if (c.stable != Button::None || c.candidate != Button::None) return true;
+  return false;
+}
+
 void Buttons::process(Channel& c, Button raw, int rawValue, uint32_t now, const char* label) {
   // A new raw reading restarts the stability timer. If the previous candidate
   // differed from the accepted state and never lasted STABLE_MS, it was a glitch.

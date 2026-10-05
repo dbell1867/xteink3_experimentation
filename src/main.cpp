@@ -6,6 +6,8 @@
 //   hold Right / Left -> jump 10 pages
 //   Back tap -> HALF clean-up        Back hold -> RESYNC clean-up
 //   hold Power -> sleep now (also after 5 min idle)
+//   hold Confirm -> power bench (battery only, ~2.5 min; results on screen + NVS)
+// Idle on battery: light sleep in 50 ms steps (bench: 20.8 mA -> 2.0 mA).
 // The current page is saved in flash (NVS) so the book reopens where you were.
 //
 // "Sleep" on the X3: GPIO13 gates the battery (CrossPoint: "driving it low is
@@ -28,6 +30,7 @@
 #include "board_pins.h"
 #include "buttons.h"
 #include "epd_uc8253.h"
+#include "power_bench.h"
 #include "text_book.h"
 
 using Mode = EpdUc8253::Mode;
@@ -65,8 +68,11 @@ int pagesUntilClean = CLEAN_EVERY;
 uint32_t lastActivity = 0;
 
 int pendingDelta = 0;
-bool pendingHalf = false, pendingResync = false, pendingSleep = false;
+bool pendingHalf = false, pendingResync = false, pendingSleep = false, pendingBench = false;
 BatteryReading batt;
+uint32_t lastKeyEvent = 0;
+constexpr uint32_t LIGHT_SLEEP_MS = 50;      // bench: 2.0 mA (100 ms: 1.8 mA, not worth 2x latency)
+constexpr uint32_t STAY_AWAKE_AFTER_KEY_MS = 300;
 // Wake timeline: millis() at each boot phase (millis() starts when the app
 // starts, so ROM + bootloader time before setup() is not included).
 struct Mark { const char* name; uint32_t ms; };
@@ -80,6 +86,7 @@ bool timelineSaved = false;
 bool showBootInfo = true;  // first page after boot shows boot # / reset reason instead of the title
 
 void onButton(Button b, ButtonEvent e, uint32_t heldMs) {
+  lastKeyEvent = millis();
   if (e == ButtonEvent::Pressed) {
     if (b == Button::Right || b == Button::Down) pendingDelta++;
     if (b == Button::Left || b == Button::Up) pendingDelta--;
@@ -88,6 +95,7 @@ void onButton(Button b, ButtonEvent e, uint32_t heldMs) {
     if (b == Button::Left) pendingDelta -= 9;
     if (b == Button::Back) pendingResync = true;
     if (b == Button::Power) pendingSleep = true;
+    if (b == Button::Confirm) pendingBench = true;
   } else if (e == ButtonEvent::Released) {
     if (b == Button::Back && heldMs < Buttons::LONG_PRESS_MS) pendingHalf = true;
   }
@@ -186,6 +194,56 @@ String findBook() {
 }
 
 void whileRefreshing() { buttons.update(); }
+
+// Text screen for the bench (portrait, small font), one HALF refresh.
+void benchScreen(const char* title, const String& body) {
+  canvas.setRotation(3);
+  canvas.fillScreen(WHITE);
+  canvas.setTextColor(BLACK);
+  canvas.setFont(&FreeSerif12pt7b);
+  canvas.setCursor(28, 60);
+  canvas.print(title);
+  canvas.setFont(&FreeSans9pt7b);
+  int y = 110, from = 0;
+  while (from < (int)body.length()) {  // one line per '\n'
+    int nl = body.indexOf('\n', from);
+    if (nl < 0) nl = body.length();
+    canvas.setCursor(28, y);
+    canvas.print(body.substring(from, nl));
+    y += 26;
+    from = nl + 1;
+  }
+  epd.refresh(canvas.getBuffer(), Mode::Half);
+  epd.powerOff();  // rails off: the panel must not skew the measurement
+}
+
+void runBench() {
+  if (HWCDC::isPlugged()) {  // a computer is on the USB bus: light sleep would break it (G17e)
+    benchScreen("Power bench", "Unplug the USB cable first:\nthe bench measures the battery,\nand light sleep would drop the\nUSB link.\n\nPress any page key to return.");
+    return;
+  }
+  benchScreen("Power bench running", "About 2.5 minutes. Don't touch.\n6 modes x 20 s; the battery gauge\nmeasures each one.");
+  power_bench::Result r[power_bench::NUM_MODES];
+  // A lambda with no captures converts to a plain function pointer.
+  power_bench::run(r, [](bool on) {
+    if (on) epd.powerOn();
+    else epd.powerOff();
+  });
+
+  String body, log;
+  for (const auto& x : r) {
+    char line[80];
+    snprintf(line, sizeof(line), "%-18s %5.1f mA (%d..%d, n=%lu)", x.name, x.avgMa, x.minMa, x.maxMa,
+             (unsigned long)x.samples);
+    body += String(line) + "\n";
+    log += String(line) + "; ";
+  }
+  batt = battery::read();
+  body += "\nBattery now " + String(batt.percent) + "%, " + String(batt.mV) + " mV";
+  body += "\n\nPress any page key to return.";
+  prefs.putString("bench", log);
+  benchScreen("Power bench results", body);
+}
 
 // Power off (battery) / deep sleep (USB). Never returns.
 void goToSleep(const char* why) {
@@ -298,6 +356,7 @@ void setup() {
   // Resume where we left off (only if it's the same book).
   prefs.begin("reader", false);
   Serial.printf("previous wake timeline: %s\n", prefs.getString("wake", "(none)").c_str());
+  Serial.printf("last power bench: %s\n", prefs.getString("bench", "(none)").c_str());
   if (prefs.getString("book", "") == bookPath) page = prefs.getInt("page", 0);
   else prefs.putString("book", bookPath);
   page = constrain(page, 0, pages - 1);  // Python: min(max(page, 0), pages - 1)
@@ -321,6 +380,10 @@ void loop() {
     goToSleep("Power held");
   } else if (millis() - lastActivity > SLEEP_AFTER_MS) {
     goToSleep("idle");
+  } else if (pendingBench) {
+    pendingBench = false;
+    runBench();
+    lastActivity = millis();
   } else if (pendingResync) {
     pendingResync = false;
     pagesUntilClean = CLEAN_EVERY;
@@ -344,5 +407,11 @@ void loop() {
     epd.powerOff();
     Serial.printf("[%7lu] idle: panel rails off\n", (unsigned long)millis());
   }
-  delay(1);
+
+  // Idle: light sleep instead of spinning, unless a computer is on the USB bus
+  // (light sleep would drop the link, G17e) or a key is being handled.
+  const bool idle = !buttons.busy() && millis() - lastKeyEvent > STAY_AWAKE_AFTER_KEY_MS && !pendingSleep &&
+                    !pendingBench && !pendingResync && !pendingHalf && pendingDelta == 0;
+  if (idle && !HWCDC::isPlugged()) power_bench::lightSleep(LIGHT_SLEEP_MS);
+  else delay(1);
 }
