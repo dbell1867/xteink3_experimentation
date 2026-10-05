@@ -38,10 +38,25 @@ class TextBook {
   uint32_t pageStart(int n) const { return pageStarts[n]; }
   int pageForOffset(uint32_t offset) const;
 
+  // Chapter headings found while indexing ("CHAPTER ..." / "Letter ..." paragraphs
+  // of at most 3 lines). Each chapter starts on a new page.
+  struct Chapter {
+    uint32_t offset;  // byte offset of the heading
+    String title;     // e.g. "I. Down the Rabbit-Hole" (cp1252)
+  };
+  const std::vector<Chapter>& chapters() const { return chapterList; }
+  int chapterForPage(int page) const;  // index into chapters(), -1 before the first
+
   // Draw page n (0-based) onto the canvas.
   void drawPage(GFXcanvas1& canvas, const Layout& layout, int n);
 
  private:
+  struct Heading {
+    char lines[3][64];  // cp1252, trimmed
+    uint8_t count;
+    uint32_t end;       // offset just after the heading paragraph
+  };
+
   // One word (already converted to cp1252 bytes, see appendCodepoint) or a paragraph break.
   struct Token {
     enum Kind { Word, Paragraph, End } kind;
@@ -54,6 +69,8 @@ class TextBook {
   String bookTitle;
   uint32_t bodyStart = 0, bodyEnd = 0;
   std::vector<uint32_t> pageStarts;  // std::vector = a growable array (Python list)
+  std::vector<Chapter> chapterList;
+  bool recordChapters = false;       // true only during buildIndex()
 
   // Buffered reader
   uint8_t buf[512];
@@ -66,6 +83,8 @@ class TextBook {
   int readByte();
   bool startsParagraph(uint32_t offset);
   void appendCodepoint(Token& t, uint32_t cp);
+  uint32_t readCodepoint(int first);  // finish decoding a UTF-8 sequence
+  bool readHeading(uint32_t offset, Heading& h);
   Token nextToken();
   uint32_t layoutPage(uint32_t start, const Layout& layout, GFXcanvas1* canvas);
   void findBody();

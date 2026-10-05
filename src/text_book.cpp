@@ -108,7 +108,16 @@ bool TextBook::startsParagraph(uint32_t offset) {
 // Map a Unicode code point to the byte our font uses for it. The font is laid
 // out as Windows-1252: ASCII, Latin-1 letters (U+00A0-00FF keep their value),
 // and typographic punctuation packed into 0x80-0x9F. Anything else -> '?'.
+namespace {
+uint8_t toCp1252(uint32_t cp);
+}
+
 void TextBook::appendCodepoint(Token& t, uint32_t cp) {
+  if (t.len < sizeof(t.text) - 1) t.text[t.len++] = char(toCp1252(cp));
+}
+
+namespace {
+uint8_t toCp1252(uint32_t cp) {
   // cp1252 bytes 0x80..0x9F -> their Unicode code points (0 = unused byte)
   static const uint16_t C1[32] = {
       0x20AC, 0,      0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,  // 0x80
@@ -116,14 +125,60 @@ void TextBook::appendCodepoint(Token& t, uint32_t cp) {
       0,      0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,  // 0x90
       0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0,      0x017E, 0x0178,  // 0x98
   };
-  uint8_t b = '?';
-  if (cp < 0x80 || (cp >= 0xA0 && cp <= 0xFF)) {
-    b = uint8_t(cp);
-  } else {
-    for (int i = 0; i < 32; i++)  // reverse lookup in the 32-entry table
-      if (C1[i] == cp) b = uint8_t(0x80 + i);
+  if (cp < 0x80 || (cp >= 0xA0 && cp <= 0xFF)) return uint8_t(cp);
+  for (int i = 0; i < 32; i++)  // reverse lookup in the 32-entry table
+    if (C1[i] == cp) return uint8_t(0x80 + i);
+  return '?';
+}
+}  // namespace
+
+// `first` is a lead byte already consumed; read its continuation bytes.
+uint32_t TextBook::readCodepoint(int first) {
+  uint32_t cp = first;
+  int extra = (first >= 0xF0) ? 3 : (first >= 0xE0) ? 2 : (first >= 0xC0) ? 1 : 0;
+  if (extra) cp = first & (0x3F >> extra);
+  while (extra-- > 0) {
+    const int cc = readByte();
+    if (cc < 0) break;
+    cp = (cp << 6) | (cc & 0x3F);
   }
-  if (t.len < sizeof(t.text) - 1) t.text[t.len++] = char(b);
+  return cp;
+}
+
+// Is there a chapter heading paragraph at `offset`? A heading: first word
+// CHAPTER or LETTER (any case), at most 3 lines, at most 200 bytes, ended by
+// a blank line. That excludes a table of contents (one long paragraph).
+bool TextBook::readHeading(uint32_t offset, Heading& h) {
+  h = Heading{};
+  seek(offset);
+  int len = 0;  // chars in the current line
+  for (int bytes = 0;; bytes++) {
+    const int c = readByte();
+    if (bytes > 200) return false;
+    if (c < 0 || c == '\n') {
+      while (len > 0 && h.lines[h.count][len - 1] == ' ') len--;  // trim right
+      if (len == 0) break;  // blank line (or end) = end of the paragraph
+      h.lines[h.count][len] = 0;
+      if (++h.count == 3) {  // a 4th non-empty line means: not a heading
+        seek(pos);
+        const int n = peekByte();
+        if (n >= 0 && n != '\n' && n != '\r') return false;
+        break;
+      }
+      len = 0;
+      if (c < 0) break;
+      continue;
+    }
+    if (c == '\r') continue;
+    const uint32_t cp = readCodepoint(c);
+    if ((cp == ' ' && len == 0) || cp == '[' || cp == ']') continue;  // trim left, drop caption brackets
+    if (len < 62) h.lines[h.count][len++] = char(toCp1252(cp));
+  }
+  h.end = pos;
+  if (h.count == 0) return false;
+  const char* l0 = h.lines[0];
+  return (strncasecmp(l0, "chapter", 7) == 0 && (l0[7] == ' ' || l0[7] == 0)) ||
+         (strncasecmp(l0, "letter", 6) == 0 && (l0[6] == ' ' || l0[6] == 0));
 }
 
 TextBook::Token TextBook::nextToken() {
@@ -153,15 +208,7 @@ TextBook::Token TextBook::nextToken() {
     const int c = peekByte();
     if (c < 0 || c == ' ' || c == '\r' || c == '\n' || c == '\t') break;
     pos++;
-    uint32_t cp = c;
-    int extra = (c >= 0xF0) ? 3 : (c >= 0xE0) ? 2 : (c >= 0xC0) ? 1 : 0;
-    if (extra) cp = c & (0x3F >> extra);
-    while (extra-- > 0) {
-      const int cc = readByte();
-      if (cc < 0) break;
-      cp = (cp << 6) | (cc & 0x3F);
-    }
-    appendCodepoint(t, cp);
+    appendCodepoint(t, readCodepoint(c));
   }
   t.text[t.len] = 0;
   return t;
@@ -200,6 +247,47 @@ uint32_t TextBook::layoutPage(uint32_t start, const Layout& L, GFXcanvas1* canva
       continue;
     }
 
+    // First word of a paragraph: is this paragraph a chapter heading? (Only
+    // read ahead for "chapter"/"letter" words, so indexing stays fast.)
+    if (lineEmpty && indentNext &&
+        ((t.len == 7 && strncasecmp(t.text, "chapter", 7) == 0) ||
+         (t.len == 6 && strncasecmp(t.text, "letter", 6) == 0))) {
+      const uint32_t after = pos;
+      Heading h;
+      if (readHeading(t.offset, h)) {
+        if (y > L.top + ascent) return t.offset;  // chapters start on a new page
+        y += lineH;                               // drop the heading a little
+        for (int i = 0; i < h.count; i++) {
+          const int len = strlen(h.lines[i]);
+          const int lw = textWidth(font, h.lines[i], len);
+          const int cx = max(L.left, (L.left + L.right - lw) / 2);  // centred
+          if (canvas) {
+            canvas->setCursor(cx, y);
+            canvas->print(h.lines[i]);
+          }
+          y += lineH;
+        }
+        y += lineH / 2;  // space below the heading
+        if (recordChapters) {
+          // "CHAPTER I." + "Down the Rabbit-Hole" -> "I. Down the Rabbit-Hole";
+          // a lone "Letter 1" / "CHAPTER II." stays as it is.
+          String title = h.lines[0];
+          if (h.count > 1) {
+            if (strncasecmp(h.lines[0], "chapter ", 8) == 0) title = String(h.lines[0] + 8);
+            for (int i = 1; i < h.count; i++) title += String(" ") + h.lines[i];
+          }
+          chapterList.push_back({t.offset, title});
+        }
+        seek(h.end);
+        x = L.left;
+        lineEmpty = true;
+        indentNext = true;
+        if (y > L.bottom) return h.end;
+        continue;
+      }
+      seek(after);  // not a heading: carry on with this word
+    }
+
     // A word: does it fit on this line?
     const int w = textWidth(font, t.text, t.len);
     if (lineEmpty && indentNext) {
@@ -227,6 +315,8 @@ uint32_t TextBook::layoutPage(uint32_t start, const Layout& L, GFXcanvas1* canva
 int TextBook::buildIndex(const Layout& layout) {
   findBody();
   pageStarts.clear();
+  chapterList.clear();
+  recordChapters = true;
   uint32_t at = bodyStart;
   // Skip leading blank lines so page 1 doesn't start with a gap.
   seek(at);
@@ -239,7 +329,15 @@ int TextBook::buildIndex(const Layout& layout) {
     if (next <= at) break;     // safety: never loop forever
     at = next;
   }
+  recordChapters = false;
   return pageStarts.size();
+}
+
+int TextBook::chapterForPage(int page) const {
+  int found = -1;
+  for (int i = 0; i < (int)chapterList.size(); i++)
+    if (pageForOffset(chapterList[i].offset) <= page) found = i;
+  return found;
 }
 
 int TextBook::pageForOffset(uint32_t offset) const {
@@ -257,9 +355,10 @@ void TextBook::drawPage(GFXcanvas1& canvas, const Layout& layout, int n) {
 // ------------------------------------------------------------ index cache ---
 
 namespace {
-constexpr uint32_t IDX_MAGIC = 0x58444932;  // "2IDX" (v2: cp1252 tokens) little-endian; bump the digit on format changes
+constexpr uint32_t IDX_MAGIC = 0x58444933;  // "3IDX" (v3: chapters, heading layout); bump on format/layout-rule changes
 
-// File layout: header, title bytes, then pageCount uint32 offsets.
+// File layout: header, title bytes, pageCount uint32 offsets, then
+// uint32 chapterCount and per chapter {uint32 offset, uint8 len, len bytes}.
 struct IdxHeader {
   uint32_t magic;
   uint32_t bookSize;
@@ -293,8 +392,19 @@ bool TextBook::saveIndex(fs::FS& fs, const char* cachePath, const Layout& layout
   size_t n = f.write(reinterpret_cast<const uint8_t*>(&hdr), sizeof(hdr));
   n += f.write(reinterpret_cast<const uint8_t*>(bookTitle.c_str()), hdr.titleLen);
   n += f.write(reinterpret_cast<const uint8_t*>(pageStarts.data()), pageStarts.size() * sizeof(uint32_t));
+  size_t want = sizeof(hdr) + hdr.titleLen + pageStarts.size() * sizeof(uint32_t);
+  const uint32_t nch = chapterList.size();
+  n += f.write(reinterpret_cast<const uint8_t*>(&nch), 4);
+  want += 4;
+  for (const Chapter& c : chapterList) {
+    const uint8_t len = min<size_t>(c.title.length(), 255);
+    n += f.write(reinterpret_cast<const uint8_t*>(&c.offset), 4);
+    n += f.write(&len, 1);
+    n += f.write(reinterpret_cast<const uint8_t*>(c.title.c_str()), len);
+    want += 5 + len;
+  }
   f.close();  // buffered writes only reach the card on close (G25g)
-  return n == sizeof(hdr) + hdr.titleLen + pageStarts.size() * sizeof(uint32_t);
+  return n == want;
 }
 
 bool TextBook::loadIndex(fs::FS& fs, const char* cachePath, const Layout& layout) {
@@ -303,8 +413,7 @@ bool TextBook::loadIndex(fs::FS& fs, const char* cachePath, const Layout& layout
   IdxHeader hdr;
   bool ok = f.read(reinterpret_cast<uint8_t*>(&hdr), sizeof(hdr)) == sizeof(hdr) && hdr.magic == IDX_MAGIC &&
             hdr.bookSize == file.size() && hdr.layoutSig == layoutSignature(layout) && hdr.titleLen < 200 &&
-            hdr.pageCount > 0 && hdr.pageCount < 100000 &&
-            f.size() == sizeof(hdr) + hdr.titleLen + hdr.pageCount * sizeof(uint32_t);
+            hdr.pageCount > 0 && hdr.pageCount < 100000;
   if (ok) {
     char title[200];
     ok = f.read(reinterpret_cast<uint8_t*>(title), hdr.titleLen) == hdr.titleLen;
@@ -312,6 +421,19 @@ bool TextBook::loadIndex(fs::FS& fs, const char* cachePath, const Layout& layout
     pageStarts.resize(hdr.pageCount);
     ok = ok && f.read(reinterpret_cast<uint8_t*>(pageStarts.data()), hdr.pageCount * sizeof(uint32_t)) ==
                    hdr.pageCount * sizeof(uint32_t);
+    uint32_t nch = 0;
+    ok = ok && f.read(reinterpret_cast<uint8_t*>(&nch), 4) == 4 && nch < 10000;
+    chapterList.clear();
+    for (uint32_t i = 0; ok && i < nch; i++) {
+      uint32_t off;
+      uint8_t len;
+      char buf[256];
+      ok = f.read(reinterpret_cast<uint8_t*>(&off), 4) == 4 && f.read(&len, 1) == 1 &&
+           f.read(reinterpret_cast<uint8_t*>(buf), len) == len;
+      buf[len] = 0;
+      if (ok) chapterList.push_back({off, String(buf)});
+    }
+    ok = ok && f.available() == 0;  // nothing left over = the file is what we think
     if (ok) {
       bookTitle = title;
       bodyStart = hdr.bodyStart;
@@ -319,6 +441,9 @@ bool TextBook::loadIndex(fs::FS& fs, const char* cachePath, const Layout& layout
     }
   }
   f.close();
-  if (!ok) pageStarts.clear();
+  if (!ok) {
+    pageStarts.clear();
+    chapterList.clear();
+  }
   return ok;
 }

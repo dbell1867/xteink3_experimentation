@@ -1,15 +1,18 @@
-// Stage 7 — text reader + battery + power-off.
+// Stage 10 — text reader with navigation (contents, book picker, menu).
 //
-// Opens the first .txt in /books on the SD card, indexes its pages, and shows
-// them with FAST turns + a RESYNC every 15 (stage 5's ghost policy).
+// Reading:
 //   Right / Down -> next page        Left / Up -> previous page
 //   hold Right / Left -> jump 10 pages
-//   Back tap -> HALF clean-up        Back hold -> RESYNC clean-up
+//   tap Back -> menu (Contents / Books / Text size / Clean screen)
 //   hold Power -> sleep now (also after 5 min idle)
-//   tap Confirm -> cycle text size (28/32/36/40 px), keeps your place
-//   hold Confirm -> power bench (battery only, ~2.5 min; results on screen + NVS)
-// Idle on battery: light sleep in 50 ms steps (bench: 20.8 mA -> 2.0 mA).
-// The current page is saved in flash (NVS) so the book reopens where you were.
+//   hold Confirm -> power bench (battery only, ~2.5 min)
+// Menus: Up/Down/Left/Right move, tap Confirm selects, tap Back goes back.
+//   Back and Confirm act on RELEASE everywhere, so a key that closes a menu
+//   can't have its release reopen it in the next screen.
+//
+// FAST page turns + RESYNC every 15; light sleep in 50 ms steps when idle on
+// battery (20.8 -> 2.0 mA). Each book's reading position is a byte offset in
+// NVS, so it survives font changes, sleep and power-off.
 //
 // "Sleep" on the X3: GPIO13 gates the battery (CrossPoint: "driving it low is
 // the battery power-off"). On battery the chip loses power entirely and the
@@ -24,16 +27,21 @@
 #include <SD.h>
 #include <SPI.h>
 #include <driver/gpio.h>
+#include <esp_rom_crc.h>
 #include <esp_sleep.h>
 #include <esp_system.h>
 
-#include "battery.h"
-#include "board_pins.h"
-#include "buttons.h"
+#include <algorithm>
+#include <vector>
+
+#include "NotoSans20.h"
 #include "NotoSerif28.h"
 #include "NotoSerif32.h"
 #include "NotoSerif36.h"
 #include "NotoSerif40.h"
+#include "battery.h"
+#include "board_pins.h"
+#include "buttons.h"
 #include "epd_uc8253.h"
 #include "power_bench.h"
 #include "text_book.h"
@@ -51,9 +59,12 @@ constexpr uint16_t BLACK = 0;
 constexpr uint32_t RAILS_OFF_AFTER_MS = 30000;
 constexpr int CLEAN_EVERY = 15;
 constexpr uint32_t SLEEP_AFTER_MS = 5 * 60 * 1000;  // auto power-off when idle
+constexpr uint32_t LIGHT_SLEEP_MS = 50;            // bench: 2.0 mA (100 ms: 1.8 mA, not worth 2x latency)
+constexpr uint32_t STAY_AWAKE_AFTER_KEY_MS = 300;
 
 // Portrait page geometry (528 x 792; the bezel hides 3 px per side).
 constexpr int PW = 528, PH = 792;
+const GFXfont* const UI_FONT = &NotoSans20;  // header, menus: cp1252 like the body fonts
 // Body text sizes (Noto Serif, cp1252 layout: real quotes/dashes/accents; tools/fontconvert.py).
 // The panel is ~257 ppi, so 28/32/36/40 px em ~ 8/9/10/11 pt.
 struct FontChoice {
@@ -72,71 +83,126 @@ TextBook::Layout LAYOUT = {
     24,           // indent
 };
 
-// Reboot detector (survives a reset, not a power cut) - still hunting the
-// occasional short USB drop + reboot.
+// Reboot detector (survives a reset, not a power cut).
 RTC_NOINIT_ATTR uint32_t bootMagic;
 RTC_NOINIT_ATTR uint32_t bootCount;
 
-String bookPath;
-int page = 0;
-int pagesUntilClean = CLEAN_EVERY;
-uint32_t lastActivity = 0;
-
-int pendingDelta = 0;
-bool pendingHalf = false, pendingResync = false, pendingSleep = false, pendingBench = false, pendingFont = false;
-BatteryReading batt;
-uint32_t lastKeyEvent = 0;
-constexpr uint32_t LIGHT_SLEEP_MS = 50;      // bench: 2.0 mA (100 ms: 1.8 mA, not worth 2x latency)
-constexpr uint32_t STAY_AWAKE_AFTER_KEY_MS = 300;
-// Wake timeline: millis() at each boot phase (millis() starts when the app
-// starts, so ROM + bootloader time before setup() is not included).
-struct Mark { const char* name; uint32_t ms; };
+// Wake timeline: millis() at each boot phase, saved in NVS "wake".
+struct Mark {
+  const char* name;
+  uint32_t ms;
+};
 Mark marks[8];
 int numMarks = 0;
 void mark(const char* name) {
   if (numMarks < 8) marks[numMarks++] = {name, millis()};
 }
 bool timelineSaved = false;
+bool showBootInfo = true;  // first page after boot shows boot # / reset reason in the header
 
-bool showBootInfo = true;  // first page after boot shows boot # / reset reason instead of the title
+// ------------------------------------------------------------------ state ---
+
+enum class Screen { Reading, Menu, Contents, Books };
+Screen screen = Screen::Reading;
+
+String bookPath;
+std::vector<String> bookPaths;  // all .txt books found, sorted
+int page = 0;
+int pagesUntilClean = CLEAN_EVERY;
+int sel = 0;  // selected row in the current menu/list
+uint32_t lastActivity = 0;
+uint32_t lastKeyEvent = 0;
+BatteryReading batt;
+
+// Key events are queued by the Buttons callback (which can run during a
+// refresh, via the idle hook) and handled in loop(), never mid-refresh.
+struct KeyEvent {
+  Button b;
+  ButtonEvent e;
+  uint32_t held;
+};
+KeyEvent keyQueue[16];
+uint8_t qHead = 0, qTail = 0;  // ring buffer (Python: collections.deque(maxlen=16))
 
 void onButton(Button b, ButtonEvent e, uint32_t heldMs) {
   lastKeyEvent = millis();
-  if (e == ButtonEvent::Pressed) {
-    if (b == Button::Right || b == Button::Down) pendingDelta++;
-    if (b == Button::Left || b == Button::Up) pendingDelta--;
-  } else if (e == ButtonEvent::LongPress) {
-    if (b == Button::Right) pendingDelta += 9;  // + the 1 from the press = 10
-    if (b == Button::Left) pendingDelta -= 9;
-    if (b == Button::Back) pendingResync = true;
-    if (b == Button::Power) pendingSleep = true;
-    if (b == Button::Confirm) pendingBench = true;
-  } else if (e == ButtonEvent::Released) {
-    if (b == Button::Back && heldMs < Buttons::LONG_PRESS_MS) pendingHalf = true;
-    if (b == Button::Confirm && heldMs < Buttons::LONG_PRESS_MS) pendingFont = true;  // tap = act on release
+  const uint8_t next = (qTail + 1) % 16;
+  if (next != qHead) {  // drop the event if the queue is full
+    keyQueue[qTail] = {b, e, heldMs};
+    qTail = next;
   }
 }
 
+// ---------------------------------------------------------------- helpers ---
+
+// NVS key for a book's position: "p" + CRC32 of its path (NVS keys max 15 chars).
+String posKey(const String& path) {
+  char k[12];
+  snprintf(k, sizeof(k), "p%08lx", (unsigned long)esp_rom_crc32_le(0, (const uint8_t*)path.c_str(), path.length()));
+  return String(k);
+}
+
+int textWidth(const GFXfont* f, const String& s) {
+  int w = 0;
+  for (size_t i = 0; i < s.length(); i++) {
+    const uint8_t c = s[i];
+    if (c >= f->first && c <= f->last) w += f->glyph[c - f->first].xAdvance;
+  }
+  return w;
+}
+
+// Cut `s` so it fits `maxW` pixels in font `f`, adding "…" (cp1252 0x85).
+String fitText(const GFXfont* f, String s, int maxW) {
+  if (textWidth(f, s) <= maxW) return s;
+  while (s.length() > 1 && textWidth(f, s + "\x85") > maxW) s.remove(s.length() - 1);
+  return s + "\x85";
+}
+
+String bookName(const String& path) {  // "/books/pride-and-prejudice.txt" -> "pride-and-prejudice"
+  String n = path.substring(path.lastIndexOf('/') + 1);
+  if (n.endsWith(".txt") || n.endsWith(".TXT")) n.remove(n.length() - 4);
+  return n;
+}
+
+void whileRefreshing() { buttons.update(); }
+
+// Refresh with the ghost policy: FAST, but every CLEAN_EVERY-th FAST is a RESYNC.
+void refreshTurn() {
+  Mode m = Mode::Fast;
+  if (--pagesUntilClean <= 0) {
+    m = Mode::Resync;
+    pagesUntilClean = CLEAN_EVERY;
+  }
+  epd.refresh(canvas.getBuffer(), m);
+}
+
+// --------------------------------------------------------------- reading ---
+
 void drawChrome() {
-  canvas.setFont(&FreeSans9pt7b);
-  canvas.setCursor(28, 32);
-  if (showBootInfo)  // boot evidence, visible even on battery; time = up to this draw
-    canvas.printf("#%lu r%d w%d  draw@%lums", (unsigned long)bootCount, (int)esp_reset_reason(),
-                  (int)esp_sleep_get_wakeup_cause(), (unsigned long)millis());
-  else
-    canvas.print(book.title().substring(0, 26));
-  // Right side: battery (+ = charging, mA from the gauge) and page number
-  char pg[48];
+  canvas.setFont(UI_FONT);
+  // Right side: battery (+ = charging) and page number
+  char right[32];
   if (batt.ok)
-    snprintf(pg, sizeof(pg), "%s%u%% %dmA  %d/%d", batt.mA > 0 ? "+" : "", batt.percent, batt.mA, page + 1,
-             book.pageCount());
+    snprintf(right, sizeof(right), "%s%u%%   %d/%d", batt.mA > 0 ? "+" : "", batt.percent, page + 1, book.pageCount());
   else
-    snprintf(pg, sizeof(pg), "%d / %d", page + 1, book.pageCount());
-  int16_t x1, y1;
-  uint16_t w, h;
-  canvas.getTextBounds(pg, 0, 0, &x1, &y1, &w, &h);
-  canvas.setCursor(PW - 28 - w, 32);
-  canvas.print(pg);
+    snprintf(right, sizeof(right), "%d/%d", page + 1, book.pageCount());
+  const int rw = textWidth(UI_FONT, right);
+  canvas.setCursor(PW - 28 - rw, 32);
+  canvas.print(right);
+
+  // Left side: current chapter (or the book title before the first chapter)
+  String left;
+  if (showBootInfo) {  // boot evidence, visible even on battery
+    char b[48];
+    snprintf(b, sizeof(b), "#%lu r%d w%d  @%lums", (unsigned long)bootCount, (int)esp_reset_reason(),
+             (int)esp_sleep_get_wakeup_cause(), (unsigned long)millis());
+    left = b;
+  } else {
+    const int ch = book.chapterForPage(page);
+    left = ch >= 0 ? book.chapters()[ch].title : book.title();
+  }
+  canvas.setCursor(28, 32);
+  canvas.print(fitText(UI_FONT, left, PW - 56 - rw - 16));
   canvas.drawFastHLine(28, 42, PW - 56, BLACK);
 
   // Progress bar along the bottom
@@ -145,22 +211,27 @@ void drawChrome() {
   canvas.fillRect(28, PH - 22, barW * (page + 1) / book.pageCount(), 5, BLACK);
 }
 
-void showPage(Mode mode) {
+void renderPage() {
   canvas.setRotation(3);
   canvas.fillScreen(WHITE);
   canvas.setTextColor(BLACK);
   batt = battery::read();
-  const uint32_t t0 = millis();
   book.drawPage(canvas, LAYOUT, page);
   drawChrome();
+}
+
+void savePosition() { prefs.putUInt(posKey(bookPath).c_str(), book.pageStart(page)); }
+
+void showPage(Mode mode) {
+  const uint32_t t0 = millis();
+  renderPage();
   const uint32_t layoutMs = millis() - t0;
   epd.refresh(canvas.getBuffer(), mode);
-  Serial.printf("[%7lu] page %d/%d  layout %lu ms + %s %lu ms   batt %u%% %u mV %d mA\n", (unsigned long)millis(),
-                page + 1, book.pageCount(), (unsigned long)layoutMs, EpdUc8253::modeName(epd.stats.used),
-                (unsigned long)epd.stats.totalMs, batt.percent, batt.mV, batt.mA);
-  prefs.putUInt("pos", book.pageStart(page));  // a byte offset survives font changes; a page number doesn't
+  Serial.printf("[%7lu] page %d/%d  layout %lu ms + %s %lu ms   batt %u%% %d mA\n", (unsigned long)millis(), page + 1,
+                book.pageCount(), (unsigned long)layoutMs, EpdUc8253::modeName(epd.stats.used),
+                (unsigned long)epd.stats.totalMs, batt.percent, batt.mA);
+  savePosition();
   if (!timelineSaved) {
-    // First page after boot: record the whole timeline (incl. the refresh) in NVS.
     mark("page shown");
     String t;
     for (int i = 0; i < numMarks; i++) t += String(marks[i].name) + "=" + marks[i].ms + " ";
@@ -172,6 +243,163 @@ void showPage(Mode mode) {
   showBootInfo = false;
   lastActivity = millis();
 }
+
+// ------------------------------------------------------------------ menus ---
+
+// A titled list with one selected (inverted) row; scrolls to keep it visible.
+void drawList(const String& title, const std::vector<String>& rows, int selected, const char* hint) {
+  canvas.setRotation(3);
+  canvas.fillScreen(WHITE);
+  canvas.setTextColor(BLACK);
+  canvas.setFont(UI_FONT);
+  canvas.setCursor(28, 40);
+  canvas.print(fitText(UI_FONT, title, PW - 56));
+  canvas.drawFastHLine(28, 52, PW - 56, BLACK);
+
+  const GFXfont* f = &NotoSerif28;
+  canvas.setFont(f);
+  const int rowH = f->yAdvance + 10;
+  const int top = 66, bottom = PH - 50;
+  const int visible = (bottom - top) / rowH;
+  const int n = rows.size();
+  const int first = constrain(selected - visible / 2, 0, max(0, n - visible));
+  for (int i = first; i < n && i < first + visible; i++) {
+    const int y = top + (i - first) * rowH;
+    const bool hi = (i == selected);
+    if (hi) canvas.fillRect(20, y, PW - 40, rowH, BLACK);
+    canvas.setTextColor(hi ? WHITE : BLACK);
+    canvas.setCursor(32, y + rowH - 14);
+    canvas.print(fitText(f, rows[i], PW - 64));
+  }
+  canvas.setTextColor(BLACK);
+  canvas.setFont(UI_FONT);
+  canvas.setCursor(28, PH - 18);
+  char foot[64];
+  snprintf(foot, sizeof(foot), "%s   %d/%d", hint, n ? selected + 1 : 0, n);
+  canvas.print(foot);
+}
+
+std::vector<String> menuRows() {
+  return {"Contents", "Books", String("Text size: ") + FONTS[fontIndex].px + " px", "Clean screen"};
+}
+
+std::vector<String> contentsRows() {
+  std::vector<String> r;
+  const int current = book.chapterForPage(page);
+  for (int i = 0; i < (int)book.chapters().size(); i++)
+    r.push_back(String(i == current ? "\x95 " : "   ") + book.chapters()[i].title);  // 0x95 = bullet
+  if (r.empty()) r.push_back("(no chapters found)");
+  return r;
+}
+
+std::vector<String> booksRows() {
+  std::vector<String> r;
+  for (const String& p : bookPaths) {
+    File f = SD.open(p);
+    const uint32_t size = f ? f.size() : 0;
+    f.close();
+    const uint32_t pos = prefs.getUInt(posKey(p).c_str(), 0);
+    const int pct = size ? int(uint64_t(pos) * 100 / size) : 0;
+    r.push_back(String(p == bookPath ? "\x95 " : "   ") + bookName(p) + "   " + pct + "%");
+  }
+  return r;
+}
+
+void showScreen(Mode mode) {
+  switch (screen) {
+    case Screen::Reading:
+      renderPage();
+      break;
+    case Screen::Menu:
+      drawList(book.title(), menuRows(), sel, "Confirm select  Back close");
+      break;
+    case Screen::Contents:
+      drawList("Contents", contentsRows(), sel, "Confirm go  Back menu");
+      break;
+    case Screen::Books:
+      drawList("Books", booksRows(), sel, "Confirm open  Back menu");
+      break;
+  }
+  if (mode == Mode::Fast) refreshTurn();
+  else epd.refresh(canvas.getBuffer(), mode);
+  if (screen == Screen::Reading) savePosition();
+  lastActivity = millis();
+}
+
+int listLength() {
+  switch (screen) {
+    case Screen::Menu: return menuRows().size();
+    case Screen::Contents: return max<int>(1, book.chapters().size());
+    case Screen::Books: return bookPaths.size();
+    default: return 0;
+  }
+}
+
+// ------------------------------------------------------------ books / index ---
+
+void setFont(int i) {
+  fontIndex = i;
+  LAYOUT.font = FONTS[i].font;
+}
+
+// A short notice drawn with a FAST refresh (e.g. "Indexing...").
+void notice(const String& line) {
+  canvas.setRotation(3);
+  canvas.fillScreen(WHITE);
+  canvas.setTextColor(BLACK);
+  canvas.setFont(&NotoSerif28);
+  canvas.setCursor(28, PH / 2);
+  canvas.print(fitText(&NotoSerif28, line, PW - 56));
+  epd.refresh(canvas.getBuffer(), Mode::Fast);
+}
+
+// Paginate the book for the current font: load "<book>.<px>.idx" or build + save it.
+int indexBook() {
+  const uint32_t t = millis();
+  const String cachePath = bookPath + "." + FONTS[fontIndex].px + ".idx";
+  const bool cached = book.loadIndex(SD, cachePath.c_str(), LAYOUT);
+  if (!cached) {
+    if (timelineSaved) notice("Indexing " + bookName(bookPath) + "\x85");  // not on the boot path
+    book.buildIndex(LAYOUT);
+    const bool saved = book.saveIndex(SD, cachePath.c_str(), LAYOUT);
+    Serial.printf("index cache %s -> %s\n", saved ? "written" : "WRITE FAILED", cachePath.c_str());
+  }
+  Serial.printf("%s @ %d px: \"%s\" -> %d pages, %d chapters, %s in %lu ms, free heap %lu\n", bookPath.c_str(),
+                FONTS[fontIndex].px, book.title().c_str(), book.pageCount(), (int)book.chapters().size(),
+                cached ? "loaded from cache" : "indexed", (unsigned long)(millis() - t),
+                (unsigned long)ESP.getFreeHeap());
+  return book.pageCount();
+}
+
+// All *.txt in /books (or in the root if /books has none), sorted by name.
+void findBooks() {
+  bookPaths.clear();
+  for (const char* dirName : {"/books", "/"}) {
+    File dir = SD.open(dirName);
+    if (!dir || !dir.isDirectory()) continue;
+    for (File f = dir.openNextFile(); f; f = dir.openNextFile()) {
+      const String name = f.name();
+      if (!f.isDirectory() && (name.endsWith(".txt") || name.endsWith(".TXT"))) bookPaths.push_back(f.path());
+    }
+    if (!bookPaths.empty()) break;
+  }
+  std::sort(bookPaths.begin(), bookPaths.end());
+  Serial.printf("books found: %d\n", (int)bookPaths.size());
+  for (const String& p : bookPaths) Serial.printf("  %s\n", p.c_str());
+}
+
+// Open a book and go to its saved position.
+bool openBook(const String& path) {
+  if (!book.open(SD, path.c_str())) return false;
+  bookPath = path;
+  prefs.putString("book", bookPath);
+  indexBook();
+  page = constrain(book.pageForOffset(prefs.getUInt(posKey(bookPath).c_str(), 0)), 0, book.pageCount() - 1);
+  pagesUntilClean = CLEAN_EVERY;
+  return book.pageCount() > 0;
+}
+
+// ------------------------------------------------------------ bench, sleep ---
 
 void message(const char* a, const char* b) {
   canvas.setRotation(3);
@@ -185,51 +413,6 @@ void message(const char* a, const char* b) {
   epd.refresh(canvas.getBuffer(), Mode::Full);
   epd.powerOff();
   Serial.printf("%s %s\n", a, b);
-}
-
-// First *.txt in /books (or in the root if there is no /books).
-// Logs every entry it looks at, so a "wrong book" is easy to diagnose.
-String findBook() {
-  String found;
-  for (const char* dirName : {"/books", "/"}) {
-    File dir = SD.open(dirName);
-    if (!dir || !dir.isDirectory()) {
-      Serial.printf("  %s: not found\n", dirName);
-      continue;
-    }
-    Serial.printf("  %s:\n", dirName);
-    for (File f = dir.openNextFile(); f; f = dir.openNextFile()) {
-      const String name = f.name();
-      Serial.printf("    %s%s  %lu bytes\n", name.c_str(), f.isDirectory() ? "/" : "", (unsigned long)f.size());
-      if (found.isEmpty() && !f.isDirectory() && (name.endsWith(".txt") || name.endsWith(".TXT")))
-        found = f.path();
-    }
-    if (!found.isEmpty()) break;
-  }
-  return found;
-}
-
-void whileRefreshing() { buttons.update(); }
-
-// Paginate the book for the current font: load "<book>.<px>.idx" or build + save it.
-int indexBook() {
-  const uint32_t t = millis();
-  const String cachePath = bookPath + "." + FONTS[fontIndex].px + ".idx";
-  const bool cached = book.loadIndex(SD, cachePath.c_str(), LAYOUT);
-  if (!cached) {
-    book.buildIndex(LAYOUT);
-    const bool saved = book.saveIndex(SD, cachePath.c_str(), LAYOUT);
-    Serial.printf("index cache %s -> %s\n", saved ? "written" : "WRITE FAILED", cachePath.c_str());
-  }
-  Serial.printf("%s @ %d px: \"%s\" -> %d pages, %s in %lu ms, free heap %lu\n", bookPath.c_str(),
-                FONTS[fontIndex].px, book.title().c_str(), book.pageCount(), cached ? "loaded from cache" : "indexed",
-                (unsigned long)(millis() - t), (unsigned long)ESP.getFreeHeap());
-  return book.pageCount();
-}
-
-void setFont(int i) {
-  fontIndex = i;
-  LAYOUT.font = FONTS[i].font;
 }
 
 // Text screen for the bench (portrait, small font), one HALF refresh.
@@ -256,7 +439,9 @@ void benchScreen(const char* title, const String& body) {
 
 void runBench() {
   if (HWCDC::isPlugged()) {  // a computer is on the USB bus: light sleep would break it (G17e)
-    benchScreen("Power bench", "Unplug the USB cable first:\nthe bench measures the battery,\nand light sleep would drop the\nUSB link.\n\nPress any page key to return.");
+    benchScreen("Power bench",
+                "Unplug the USB cable first:\nthe bench measures the battery,\nand light sleep would drop the\nUSB "
+                "link.\n\nPress any page key to return.");
     return;
   }
   benchScreen("Power bench running", "About 2.5 minutes. Don't touch.\n6 modes x 20 s; the battery gauge\nmeasures each one.");
@@ -294,17 +479,15 @@ void goToSleep(const char* why) {
 
   // Leave the current page on the glass with a small banner (e-paper keeps it at 0 W).
   if (book.pageCount() > 0) {
-    canvas.setRotation(3);
-    canvas.fillScreen(WHITE);
-    canvas.setTextColor(BLACK);
-    book.drawPage(canvas, LAYOUT, page);
-    drawChrome();
+    screen = Screen::Reading;
+    renderPage();
     canvas.fillRect(28, PH - 80, PW - 56, 44, WHITE);
     canvas.drawRect(28, PH - 80, PW - 56, 44, BLACK);
-    canvas.setFont(&FreeSans9pt7b);
-    canvas.setCursor(44, PH - 52);
-    canvas.print("Sleeping - press Power to continue");
+    canvas.setFont(UI_FONT);
+    canvas.setCursor(44, PH - 50);
+    canvas.print("Sleeping \x97 press Power to continue");  // 0x97 = em dash
     epd.refresh(canvas.getBuffer(), Mode::Fast);
+    savePosition();
   }
   epd.deepSleep();
   SD.end();
@@ -325,6 +508,129 @@ void goToSleep(const char* why) {
   esp_deep_sleep_start();  // on battery we never get here: power is already gone
 }
 
+// ------------------------------------------------------------- key handling ---
+
+// What the queued keys asked for, gathered so one batch gives one refresh.
+struct Actions {
+  int pageDelta = 0;
+  int selDelta = 0;
+  bool select = false, back = false, sleep = false, bench = false;
+};
+
+void collect(Actions& a) {
+  while (qHead != qTail) {
+    const KeyEvent k = keyQueue[qHead];
+    qHead = (qHead + 1) % 16;
+    const bool tap = k.e == ButtonEvent::Released && k.held < Buttons::LONG_PRESS_MS;
+    const bool fwd = k.b == Button::Right || k.b == Button::Down;
+    const bool rev = k.b == Button::Left || k.b == Button::Up;
+
+    if (k.e == ButtonEvent::LongPress && k.b == Button::Power) a.sleep = true;
+    if (screen == Screen::Reading) {
+      if (k.e == ButtonEvent::Pressed && fwd) a.pageDelta++;
+      if (k.e == ButtonEvent::Pressed && rev) a.pageDelta--;
+      if (k.e == ButtonEvent::LongPress && k.b == Button::Right) a.pageDelta += 9;  // + the press = 10
+      if (k.e == ButtonEvent::LongPress && k.b == Button::Left) a.pageDelta -= 9;
+      if (k.e == ButtonEvent::LongPress && k.b == Button::Confirm) a.bench = true;
+      if (tap && k.b == Button::Back) a.back = true;  // = open the menu
+    } else {
+      if (k.e == ButtonEvent::Pressed && fwd) a.selDelta++;
+      if (k.e == ButtonEvent::Pressed && rev) a.selDelta--;
+      if (tap && k.b == Button::Confirm) a.select = true;
+      if (tap && k.b == Button::Back) a.back = true;
+    }
+  }
+}
+
+void enter(Screen s, int selected) {
+  screen = s;
+  sel = selected;
+  showScreen(Mode::Fast);
+}
+
+void handle(const Actions& a) {
+  if (a.sleep) goToSleep("Power held");
+  if (a.bench) {
+    runBench();
+    lastActivity = millis();
+    return;
+  }
+
+  if (screen == Screen::Reading) {
+    if (a.back) {
+      enter(Screen::Menu, 0);
+    } else if (a.pageDelta != 0) {
+      const int target = constrain(page + a.pageDelta, 0, book.pageCount() - 1);
+      if (target != page) {
+        page = target;
+        showScreen(Mode::Fast);
+      }
+    }
+    return;
+  }
+
+  // In a menu or list
+  if (a.back) {
+    if (screen == Screen::Menu) {
+      screen = Screen::Reading;
+      showScreen(Mode::Half);  // back to the page: clean, no flash
+    } else {
+      enter(Screen::Menu, screen == Screen::Contents ? 0 : 1);
+    }
+    return;
+  }
+  if (a.select) {
+    if (screen == Screen::Menu) {
+      switch (sel) {
+        case 0: enter(Screen::Contents, max(0, book.chapterForPage(page))); break;
+        case 1: {
+          const auto it = std::find(bookPaths.begin(), bookPaths.end(), bookPath);
+          enter(Screen::Books, it == bookPaths.end() ? 0 : int(it - bookPaths.begin()));
+          break;
+        }
+        case 2: {  // next text size, keep the first word on screen
+          const uint32_t pos = book.pageStart(page);
+          setFont((fontIndex + 1) % NUM_FONTS);
+          prefs.putUChar("font", fontIndex);
+          indexBook();
+          page = book.pageForOffset(pos);
+          showScreen(Mode::Fast);  // menu again, with the new size shown
+          break;
+        }
+        case 3:
+          screen = Screen::Reading;
+          pagesUntilClean = CLEAN_EVERY;
+          showScreen(Mode::Resync);
+          break;
+      }
+    } else if (screen == Screen::Contents) {
+      if (!book.chapters().empty()) {
+        page = book.pageForOffset(book.chapters()[sel].offset);
+        screen = Screen::Reading;
+        showScreen(Mode::Half);
+      }
+    } else if (screen == Screen::Books) {
+      if (bookPaths[sel] != bookPath) {
+        savePosition();
+        openBook(bookPaths[sel]);
+      }
+      screen = Screen::Reading;
+      showScreen(Mode::Half);
+    }
+    return;
+  }
+  if (a.selDelta != 0) {
+    const int n = listLength();
+    const int s = constrain(sel + a.selDelta, 0, n - 1);
+    if (s != sel) {
+      sel = s;
+      showScreen(Mode::Fast);
+    }
+  }
+}
+
+// ------------------------------------------------------------ setup / loop ---
+
 void setup() {
   // FIRST: hold the battery latch (GPIO13). On a Power-key boot from battery the
   // rail only stays up while the key is pressed until firmware asserts this.
@@ -340,7 +646,6 @@ void setup() {
   Serial.begin(115200);
   Serial.setTxTimeoutMs(0);
   // Wait for a serial host only in the development case (upload/USB reset).
-  // On a Power-key wake no host is there in time anyway: that wait cost 990 ms.
   if (!wakeBoot) while (!Serial && millis() < 1000) delay(10);
   mark("serial");
   if (bootMagic != 0xB007C0DE) {
@@ -348,14 +653,12 @@ void setup() {
     bootCount = 0;
   }
   bootCount++;
-  Serial.printf("\n=== Xteink X3 stage 7: reader === boot #%lu, reset reason %d, wake cause %d\n",
-                (unsigned long)bootCount, (int)esp_reset_reason(), (int)esp_sleep_get_wakeup_cause());
+  Serial.printf("\n=== Xteink X3 stage 10: reader === boot #%lu, reset reason %d, wake cause %d\n",
+                (unsigned long)bootCount, (int)resetReason, (int)esp_sleep_get_wakeup_cause());
   delay(50);  // let the SD card's supply settle
 
   battery::begin();
   batt = battery::read();
-  Serial.printf("battery: %s %u%% %u mV %d mA\n", batt.ok ? "ok" : "NO GAUGE", batt.percent, batt.mV, batt.mA);
-
   buttons.begin(onButton);
   epd.begin();  // display first: it owns the SPI bus
   epd.setIdleHook(whileRefreshing);
@@ -367,30 +670,28 @@ void setup() {
     message("No SD card found.", "Insert a FAT32 card and reset.");
     return;
   }
-  bookPath = findBook();
-  if (bookPath.isEmpty() || !book.open(SD, bookPath.c_str())) {
+  prefs.begin("reader", false);
+  Serial.printf("previous wake timeline: %s\n", prefs.getString("wake", "(none)").c_str());
+  setFont(constrain(prefs.getUChar("font", 0), 0, NUM_FONTS - 1));
+
+  findBooks();
+  if (bookPaths.empty()) {
     message("No .txt book found.", "Copy one into /books on the card.");
     return;
   }
-
   mark("find");
-  prefs.begin("reader", false);
-  setFont(constrain(prefs.getUChar("font", 0), 0, NUM_FONTS - 1));
-  const int pages = indexBook();
+  // Reopen the last book if it's still on the card, else the first one.
+  String last = prefs.getString("book", "");
+  if (std::find(bookPaths.begin(), bookPaths.end(), last) == bookPaths.end()) last = bookPaths[0];
+  if (!openBook(last)) {
+    message("Could not open the book.", last.c_str());
+    return;
+  }
   mark("index");
 
-  // Resume where we left off (only if it's the same book).
-  Serial.printf("previous wake timeline: %s\n", prefs.getString("wake", "(none)").c_str());
-  Serial.printf("last power bench: %s\n", prefs.getString("bench", "(none)").c_str());
-  if (prefs.getString("book", "") == bookPath) page = book.pageForOffset(prefs.getUInt("pos", 0));
-  else prefs.putString("book", bookPath);
-  page = constrain(page, 0, pages - 1);  // Python: min(max(page, 0), pages - 1)
-
-  // Woke from OUR sleep: the glass shows a clean page + banner, so HALF (which
-  // ignores the old frame) is enough. Anything else: full clean-up.
+  // Woke from OUR sleep: the glass shows a clean page + banner, so HALF is enough.
   const bool cleanWake = wakeBoot && prefs.getBool("cleanSleep", false);
   if (prefs.getBool("cleanSleep", false)) prefs.putBool("cleanSleep", false);
-  Serial.printf("clean wake: %s\n", cleanWake ? "yes -> HALF" : "no -> RESYNC");
   showPage(cleanWake ? Mode::Half : Mode::Resync);
 }
 
@@ -401,42 +702,12 @@ void loop() {
     return;
   }
 
-  if (pendingSleep) {
-    goToSleep("Power held");
-  } else if (millis() - lastActivity > SLEEP_AFTER_MS) {
+  Actions a;
+  collect(a);
+  handle(a);
+
+  if (millis() - lastActivity > SLEEP_AFTER_MS) {
     goToSleep("idle");
-  } else if (pendingFont) {
-    pendingFont = false;
-    const uint32_t pos = book.pageStart(page);  // first word on screen
-    setFont((fontIndex + 1) % NUM_FONTS);
-    prefs.putUChar("font", fontIndex);
-    indexBook();
-    page = book.pageForOffset(pos);  // the page that now contains that word
-    pagesUntilClean = CLEAN_EVERY;
-    showPage(Mode::Half);  // whole layout changed: HALF drives every pixel
-  } else if (pendingBench) {
-    pendingBench = false;
-    runBench();
-    lastActivity = millis();
-  } else if (pendingResync) {
-    pendingResync = false;
-    pagesUntilClean = CLEAN_EVERY;
-    showPage(Mode::Resync);
-  } else if (pendingHalf) {
-    pendingHalf = false;
-    showPage(Mode::Half);
-  } else if (pendingDelta != 0) {
-    const int target = constrain(page + pendingDelta, 0, book.pageCount() - 1);
-    pendingDelta = 0;
-    if (target != page) {
-      page = target;
-      Mode m = Mode::Fast;
-      if (--pagesUntilClean <= 0) {
-        m = Mode::Resync;
-        pagesUntilClean = CLEAN_EVERY;
-      }
-      showPage(m);
-    }
   } else if (epd.powered() && millis() - lastActivity > RAILS_OFF_AFTER_MS) {
     epd.powerOff();
     Serial.printf("[%7lu] idle: panel rails off\n", (unsigned long)millis());
@@ -444,8 +715,7 @@ void loop() {
 
   // Idle: light sleep instead of spinning, unless a computer is on the USB bus
   // (light sleep would drop the link, G17e) or a key is being handled.
-  const bool idle = !buttons.busy() && millis() - lastKeyEvent > STAY_AWAKE_AFTER_KEY_MS && !pendingSleep &&
-                    !pendingBench && !pendingFont && !pendingResync && !pendingHalf && pendingDelta == 0;
+  const bool idle = !buttons.busy() && millis() - lastKeyEvent > STAY_AWAKE_AFTER_KEY_MS && qHead == qTail;
   if (idle && !HWCDC::isPlugged()) power_bench::lightSleep(LIGHT_SLEEP_MS);
   else delay(1);
 }

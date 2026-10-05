@@ -123,6 +123,14 @@ Within ~30 counts of X4 → CrossPoint thresholds (3100/2090/750, 1120) apply; a
   Per-size index caches `/books/alice.txt.<px>.idx` (first build ~0.9 s, cached 5 ms). Reading position stored as a
   byte offset (NVS "pos") so a size change keeps your place.
 
+## Navigation (stage 10)
+- Chapter headings: paragraph whose first word is CHAPTER/LETTER (any case), ≤3 lines, ≤200 bytes (skips a table of
+  contents); each chapter starts on a new page, heading centred. Chapter list stored in the v3 index cache.
+- Predicted (tools/pagesim.py, a byte-level port of text_book.cpp) at 28 px: Alice 276 p / 12 ch (device: 276 / 12 ✓),
+  Frankenstein 755 / 28, Pride and Prejudice 1345 / 61 (device counts not logged yet).
+- UI: tap Back = menu (Contents / Books / Text size / Clean screen); Back/Confirm act on release everywhere; key events
+  queued and handled outside refreshes. Per-book positions in NVS key "p"+CRC32(path). UI font Noto Sans 20 px (cp1252).
+
 ## Unknowns / to verify
 - Earlier USB drops = magnetic cable detaching. One reboot (10:35:49) still unexplained.
 - Is −20 mA on USB = charge terminated, battery feeding system?
