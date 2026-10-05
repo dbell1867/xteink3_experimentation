@@ -1,5 +1,7 @@
 #include "xtc_book.h"
 
+#include "cp1252.h"
+
 namespace {
 constexpr uint32_t XTC_MAGIC = 0x00435458;  // "XTC\0" (1-bit); "XTCH" (2-bit) is not supported
 constexpr uint32_t XTG_MAGIC = 0x00475458;  // "XTG\0" 1-bit page
@@ -49,7 +51,7 @@ bool XtcBook::open(fs::FS& fs, const char* path) {
   char t[129] = {0};  // title: 128 bytes at 0x38
   file.seek(0x38);
   file.read(reinterpret_cast<uint8_t*>(t), 128);
-  bookTitle = t;
+  bookTitle = utf8ToCp1252(t);  // stored UTF-8; our fonts are cp1252
 
   if (hasChapters && chapterOffset >= 56) {
     const uint64_t end = tableOffset > chapterOffset ? tableOffset : dataOffset;
@@ -62,7 +64,7 @@ bool XtcBook::open(fs::FS& fs, const char* path) {
       memcpy(name, rec, 80);
       const int start = u16(rec + 0x50);  // 1-based
       if (name[0] == 0 && start == 0) break;
-      if (start >= 1 && start <= pages) chapterList.push_back({start - 1, String(name)});
+      if (start >= 1 && start <= pages) chapterList.push_back({start - 1, utf8ToCp1252(name)});
     }
   }
   err = "";

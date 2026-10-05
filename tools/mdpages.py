@@ -478,12 +478,14 @@ def write_xtc(path, images, title, chapters, author=""):
     out = bytearray()
     out += struct.pack("<IBBHBBBBIQQQQII", 0x00435458, 1, 0, n, 0, 1, 0, 1 if chapters else 0, 0,
                        HEADER, table_off, data_off, 0, chap_off if chapters else 0, 0)
-    out += title.encode("utf-8")[:127].ljust(128, b"\0")
+    out += title.encode("utf-8")[:127].decode("utf-8", "ignore").encode("utf-8").ljust(128, b"\0")
     out += author.encode("utf-8")[:63].ljust(64, b"\0")
     for k, (name, start) in enumerate(chapters):
         end = (chapters[k + 1][1] - 1) if k + 1 < len(chapters) else n - 1
         end = max(end, start)
-        rec = name.encode("utf-8")[:79].ljust(80, b"\0") + struct.pack("<HH", start + 1, end + 1)
+        # cut to 79 bytes on a character boundary (never split a UTF-8 sequence)
+        nm = name.encode("utf-8")[:79].decode("utf-8", "ignore").encode("utf-8")
+        rec = nm.ljust(80, b"\0") + struct.pack("<HH", start + 1, end + 1)
         out += rec.ljust(96, b"\0")
     off = data_off
     for b in page_bytes:

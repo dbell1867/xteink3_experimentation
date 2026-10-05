@@ -1,5 +1,7 @@
 #include "text_book.h"
 
+#include "cp1252.h"
+
 #include <algorithm>
 
 namespace {
@@ -105,32 +107,9 @@ bool TextBook::startsParagraph(uint32_t offset) {
 
 // ---------------------------------------------------------- tokenizer ---
 
-// Map a Unicode code point to the byte our font uses for it. The font is laid
-// out as Windows-1252: ASCII, Latin-1 letters (U+00A0-00FF keep their value),
-// and typographic punctuation packed into 0x80-0x9F. Anything else -> '?'.
-namespace {
-uint8_t toCp1252(uint32_t cp);
-}
-
 void TextBook::appendCodepoint(Token& t, uint32_t cp) {
-  if (t.len < sizeof(t.text) - 1) t.text[t.len++] = char(toCp1252(cp));
+  if (t.len < sizeof(t.text) - 1) t.text[t.len++] = char(toCp1252(cp));  // cp1252.h
 }
-
-namespace {
-uint8_t toCp1252(uint32_t cp) {
-  // cp1252 bytes 0x80..0x9F -> their Unicode code points (0 = unused byte)
-  static const uint16_t C1[32] = {
-      0x20AC, 0,      0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,  // 0x80
-      0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0,      0x017D, 0,       // 0x88
-      0,      0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,  // 0x90
-      0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0,      0x017E, 0x0178,  // 0x98
-  };
-  if (cp < 0x80 || (cp >= 0xA0 && cp <= 0xFF)) return uint8_t(cp);
-  for (int i = 0; i < 32; i++)  // reverse lookup in the 32-entry table
-    if (C1[i] == cp) return uint8_t(0x80 + i);
-  return '?';
-}
-}  // namespace
 
 // `first` is a lead byte already consumed; read its continuation bytes.
 uint32_t TextBook::readCodepoint(int first) {

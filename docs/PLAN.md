@@ -1,14 +1,16 @@
 # Xteink X3 bring-up — plan
 
 ## Resume here
-- **Position:** Stage 13 (USB sync) **done** — snapshot stages/13-usb-sync.
-- **Daily workflow:** edit docs/lesson-*.md -> X3 awake + plugged in -> `.venv/bin/python tools/x3sync.py`
-  (re-renders changed lessons, sends only differing files, ~2.5 s per lesson at 283 KB/s; `--delete` removes
-  .xtc gone locally, refuses if the local set is empty). Venv: `python -m venv .venv && .venv/bin/pip install
-  -r tools/requirements.txt`. No auto-sleep while a computer is on USB.
-- **Pipeline:** tools/mdpages.py (Markdown -> landscape pages -> .xtc), tools/xtcinfo.py (independent checker).
-- **Project goals:** see memory xteink3-project-goals (lessons on the bus; marimo talking points + two-way clicker).
-- **Next (pick):** marimo test deck + speaker-notes export; spike: can a laptop helper reach reveal.js in marimo?
+- **Position:** Stage 14 (talking points) **done** — snapshot stages/14-talking-points.
+- **Talk workflow:** write speaker notes in marimo (`uv run marimo edit deck.py`, slides layout) ->
+  `.venv/bin/python tools/notes2xtc.py ~/Work/Python/Marimo/<deck>/deck.py` -> `tools/x3sync.py`.
+  One X3 page per reveal.js step (slides, fragments, sub-slides); ~10-11 note lines fit; it warns if cut off.
+- **Test deck:** ~/Work/Python/Marimo/xteink3_deck (marimo 0.25.1, own git repo, not committed by me).
+  Layout file pairs notes with cells BY POSITION. Tested: arrows still change slides with a slider focused;
+  Right skips sub-slides (clicker must send reveal's linear "next"); S opens marimo's notes window.
+- **Lesson workflow:** edit docs/lesson-*.md -> `.venv/bin/python tools/x3sync.py` (X3 awake + plugged in).
+- **Next:** clicker spike — X3 as BLE keyboard sending reveal's "next"/"prev" (Space/PageDown? verify),
+  step counting from the layout, resync gesture; measure BLE current. Two-way helper only if drift hurts.
 - **Git:** commit per stage locally; the USER pushes (never push — see memory).
 - **Workflow notes:** stop any follow_serial capture before uploading (it holds the port); don't `pkill -f` a pattern
   that's in your own shell's command line. When copying to SD: /books at card ROOT, and eject before removing.
@@ -53,6 +55,9 @@
 19. Stage 13 USB sync: @-line protocol + 4 KB acked chunks, .part + CRC then rename; ROM CRC32 == zlib (checked).
     Throughput 19 KB/s at first (PC read(256) waited out its 0.2 s timeout per ACK) -> 283 KB/s (predicted 150-300).
     Bad-CRC PUT refused, nothing left behind. Defaults made project-relative after spotting a --delete hazard.
+20. Stage 14 talking points: marimo 0.25.1 slides layout format read from marimo's own code (notes per cell,
+    by position). tools/notes2xtc.py: one page per step, titles via AST (regex failed twice). Bug: XTC names are
+    UTF-8 but the UI font is cp1252 ("Â·") -> shared src/cp1252.h. Compact talk layout: no overflow.
 
 ## Decisions
 - C++ / Arduino core 3.x via pioarduino — stock fw is also Arduino-ESP32, CrossPoint proves the platform on this device.

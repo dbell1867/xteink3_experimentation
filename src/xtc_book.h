@@ -15,7 +15,7 @@ class XtcBook {
  public:
   struct Chapter {
     int page;      // 0-based first page
-    String title;  // UTF-8 as stored in the file
+    String title;  // converted from the file's UTF-8 to cp1252 (our fonts)
   };
 
   // Opens and validates the header. On failure, error() says why.
