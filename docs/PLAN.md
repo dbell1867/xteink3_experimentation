@@ -1,14 +1,14 @@
 # Xteink X3 bring-up — plan
 
 ## Resume here
-- **Position:** Stage 12 (lessons on the X3 as XTC) **done** — snapshot stages/12-xtc-lessons.
-- **Pipeline:** `tools/mdpages.py docs/lesson-NN.md build/pages/X --xtc build/xtc/X.xtc` (landscape default,
-  body 28 px, tables 25, code 24, symbol fallbacks) -> copy .xtc to /books -> X3 page viewer (page copied
-  straight into the frame buffer). Check files with `tools/xtcinfo.py file.xtc pngdir` (bit-for-bit).
-  Deps: tools/requirements.txt. Orientation: keys on the LEFT (Power right); lower page key = next.
+- **Position:** Stage 13 (USB sync) **done** — snapshot stages/13-usb-sync.
+- **Daily workflow:** edit docs/lesson-*.md -> X3 awake + plugged in -> `.venv/bin/python tools/x3sync.py`
+  (re-renders changed lessons, sends only differing files, ~2.5 s per lesson at 283 KB/s; `--delete` removes
+  .xtc gone locally, refuses if the local set is empty). Venv: `python -m venv .venv && .venv/bin/pip install
+  -r tools/requirements.txt`. No auto-sleep while a computer is on USB.
+- **Pipeline:** tools/mdpages.py (Markdown -> landscape pages -> .xtc), tools/xtcinfo.py (independent checker).
 - **Project goals:** see memory xteink3-project-goals (lessons on the bus; marimo talking points + two-way clicker).
-- **Next (pick):** USB-serial sync of .xtc files (no card swaps); marimo test deck + speaker-notes export;
-  spike: can a laptop helper reach reveal.js inside marimo's page?
+- **Next (pick):** marimo test deck + speaker-notes export; spike: can a laptop helper reach reveal.js in marimo?
 - **Git:** commit per stage locally; the USER pushes (never push — see memory).
 - **Workflow notes:** stop any follow_serial capture before uploading (it holds the port); don't `pkill -f` a pattern
   that's in your own shell's command line. When copying to SD: /books at card ROOT, and eject before removing.
@@ -50,6 +50,9 @@
 18. Stage 12 XTC lessons: PC renders Markdown -> 1-bit landscape pages (same FreeType mono as the device fonts),
     exports Xteink XTC (format from CrossPoint); independent checker: 0 mismatches over 67 pages. X3 viewer + menu
     orientation setting; tables readable at 25 px; keys-left preferred, lower key = next.
+19. Stage 13 USB sync: @-line protocol + 4 KB acked chunks, .part + CRC then rename; ROM CRC32 == zlib (checked).
+    Throughput 19 KB/s at first (PC read(256) waited out its 0.2 s timeout per ACK) -> 283 KB/s (predicted 150-300).
+    Bad-CRC PUT refused, nothing left behind. Defaults made project-relative after spotting a --delete hazard.
 
 ## Decisions
 - C++ / Arduino core 3.x via pioarduino — stock fw is also Arduino-ESP32, CrossPoint proves the platform on this device.

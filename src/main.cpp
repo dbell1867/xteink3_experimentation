@@ -46,6 +46,7 @@
 #include "epd_uc8253.h"
 #include "power_bench.h"
 #include "text_book.h"
+#include "sync_server.h"
 #include "wake_frame.h"
 #include "xtc_book.h"
 
@@ -649,6 +650,23 @@ void collect(Actions& a) {
   }
 }
 
+// After a USB sync: refresh the book list; if the open book was replaced or
+// removed, reopen (or fall back to the first book) and forget the saved wake frame.
+void afterSync(const sync_server::Result& r) {
+  if (r.changed.empty()) return;
+  findBooks();
+  const String openName = bookPath.substring(bookPath.lastIndexOf('/') + 1);
+  const bool openChanged = std::find(r.changed.begin(), r.changed.end(), openName) != r.changed.end();
+  const bool stillThere = std::find(bookPaths.begin(), bookPaths.end(), bookPath) != bookPaths.end();
+  if (openChanged || !stillThere) {
+    wake_frame::invalidate();
+    if (bookPaths.empty() || !openBook(stillThere ? bookPath : bookPaths[0])) {
+      message("No readable book after sync.", "Check /books on the card.");
+      return;
+    }
+  }
+}
+
 void enter(Screen s, int selected) {
   screen = s;
   sel = selected;
@@ -757,6 +775,7 @@ void setup() {
   mark("setup");
   const esp_reset_reason_t resetReason = esp_reset_reason();
   const bool wakeBoot = (resetReason == ESP_RST_POWERON || resetReason == ESP_RST_DEEPSLEEP);
+  Serial.setRxBufferSize(8192);  // room for a 4 KB sync chunk (must be set before begin)
   Serial.begin(115200);
   Serial.setTxTimeoutMs(0);
   // Wait for a serial host only in the development case (upload/USB reset).
@@ -848,11 +867,24 @@ void loop() {
     return;
   }
 
+  // USB sync from the PC (tools/x3sync.py): only while a computer is on the bus.
+  if (HWCDC::isPlugged() && Serial.available()) {
+    sync_server::Result r;
+    if (sync_server::poll(SD, r, [] { notice("Syncing over USB\x85"); })) {
+      Serial.printf("sync: %d changed, %d failed\n", (int)r.changed.size(), r.failed);
+      afterSync(r);
+      screen = Screen::Reading;
+      showScreen(Mode::Half);
+    }
+  }
+
   Actions a;
   collect(a);
   handle(a);
 
-  if (millis() - lastActivity > SLEEP_AFTER_MS) {
+  // Auto power-off when idle -- but not while a computer is connected: it would
+  // cut the USB link (sync, logs) and the board is on USB power anyway.
+  if (!HWCDC::isPlugged() && millis() - lastActivity > SLEEP_AFTER_MS) {
     goToSleep("idle");
   } else if (epd.powered() && millis() - lastActivity > RAILS_OFF_AFTER_MS) {
     epd.powerOff();
