@@ -1,0 +1,4 @@
+# PC-side tools: fontconvert.py, mdpages.py, xtcinfo.py, pagesim.py
+freetype-py
+pillow
+markdown-it-py

@@ -6,3 +6,6 @@ compile_commands.json
 # Factory flash dump: 16 MB, contains the stock firmware and its NVS settings.
 # Keep it locally (+ a private off-site copy); restore steps stay in backup/README.md.
 backup/*.bin
+
+# Rendered pages (regenerate with tools/mdpages.py)
+build/

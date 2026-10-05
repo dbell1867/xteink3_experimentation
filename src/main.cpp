@@ -1,4 +1,4 @@
-// Stage 10 — text reader with navigation (contents, book picker, menu).
+// Stage 12 — reader for .txt (laid out here) and .xtc (pages pre-rendered on the PC).
 //
 // Reading:
 //   Right / Down -> next page        Left / Up -> previous page
@@ -47,13 +47,20 @@
 #include "power_bench.h"
 #include "text_book.h"
 #include "wake_frame.h"
+#include "xtc_book.h"
 
 using Mode = EpdUc8253::Mode;
 
 GFXcanvas1 canvas(EpdUc8253::WIDTH, EpdUc8253::HEIGHT);
 EpdUc8253 epd;
 Buttons buttons;
-TextBook book;
+TextBook book;   // .txt: laid out on the device
+XtcBook xbook;   // .xtc: pre-rendered landscape pages (tools/mdpages.py)
+bool xtcMode = false;
+// Landscape (.xtc) orientation: false = Power key on the left, front keys on the
+// right (rotation 0, the panel's native layout); true = turned 180 degrees.
+// Either way the LOWER page key means "next". Saved in NVS "keysLeft".
+bool keysLeft = true;  // keys-left read best on the device (stage 12)
 Preferences prefs;  // key/value store in the ESP32's flash (NVS)
 
 constexpr uint16_t WHITE = 1;
@@ -162,9 +169,11 @@ String fitText(const GFXfont* f, String s, int maxW) {
   return s + "\x85";
 }
 
+bool isXtc(const String& path) { return path.endsWith(".xtc") || path.endsWith(".XTC"); }
+
 String bookName(const String& path) {  // "/books/pride-and-prejudice.txt" -> "pride-and-prejudice"
   String n = path.substring(path.lastIndexOf('/') + 1);
-  if (n.endsWith(".txt") || n.endsWith(".TXT")) n.remove(n.length() - 4);
+  if (n.endsWith(".txt") || n.endsWith(".TXT") || isXtc(n)) n.remove(n.length() - 4);
   return n;
 }
 
@@ -180,16 +189,53 @@ void refreshTurn() {
   epd.refresh(canvas.getBuffer(), m);
 }
 
+// ------------------------------------------------- current document (.txt or .xtc) ---
+// The rest of the reader asks these, so it doesn't care which kind is open.
+// Position: a .txt uses the byte offset of the page's first word; an .xtc the page number.
+
+int pageCount() { return xtcMode ? xbook.pageCount() : book.pageCount(); }
+String docTitle() { return xtcMode ? xbook.title() : book.title(); }
+int numChapters() { return xtcMode ? xbook.chapters().size() : book.chapters().size(); }
+String chapterTitle(int i) { return xtcMode ? xbook.chapters()[i].title : book.chapters()[i].title; }
+int chapterPage(int i) { return xtcMode ? xbook.chapters()[i].page : book.pageForOffset(book.chapters()[i].offset); }
+int chapterAt(int p) { return xtcMode ? xbook.chapterForPage(p) : book.chapterForPage(p); }
+uint32_t posOfPage(int p) { return xtcMode ? uint32_t(p) : book.pageStart(p); }
+int pageOfPos(uint32_t pos) { return xtcMode ? int(pos) : book.pageForOffset(pos); }
+int uiRotation() { return xtcMode ? (keysLeft ? 2 : 0) : 3; }  // .xtc pages are landscape = native layout
+
+// Turn a native-layout frame 180 degrees in place: reverse the bytes, and the
+// bits inside each byte (pixel 0 of a row is the byte's top bit).
+void rotate180(uint8_t* fb, size_t len) {
+  static uint8_t rev[256];
+  static bool ready = false;
+  if (!ready) {
+    for (int i = 0; i < 256; i++) {
+      uint8_t r = 0;
+      for (int b = 0; b < 8; b++)
+        if (i & (1 << b)) r |= 0x80 >> b;
+      rev[i] = r;
+    }
+    ready = true;
+  }
+  for (size_t i = 0, j = len - 1; i < j; i++, j--) {
+    const uint8_t a = rev[fb[i]];
+    fb[i] = rev[fb[j]];
+    fb[j] = a;
+  }
+  if (len % 2) fb[len / 2] = rev[fb[len / 2]];
+}
+
 // --------------------------------------------------------------- reading ---
 
 void drawChrome() {
+  const int PW = canvas.width(), PH = canvas.height();
   canvas.setFont(UI_FONT);
   // Right side: battery (+ = charging) and page number
   char right[32];
   if (batt.ok)
-    snprintf(right, sizeof(right), "%s%u%%   %d/%d", batt.mA > 0 ? "+" : "", batt.percent, page + 1, book.pageCount());
+    snprintf(right, sizeof(right), "%s%u%%   %d/%d", batt.mA > 0 ? "+" : "", batt.percent, page + 1, pageCount());
   else
-    snprintf(right, sizeof(right), "%d/%d", page + 1, book.pageCount());
+    snprintf(right, sizeof(right), "%d/%d", page + 1, pageCount());
   const int rw = textWidth(UI_FONT, right);
   canvas.setCursor(PW - 28 - rw, 32);
   canvas.print(right);
@@ -202,8 +248,8 @@ void drawChrome() {
              (int)esp_sleep_get_wakeup_cause(), (unsigned long)millis());
     left = b;
   } else {
-    const int ch = book.chapterForPage(page);
-    left = ch >= 0 ? book.chapters()[ch].title : book.title();
+    const int ch = chapterAt(page);
+    left = ch >= 0 ? chapterTitle(ch) : docTitle();
   }
   canvas.setCursor(28, 32);
   canvas.print(fitText(UI_FONT, left, PW - 56 - rw - 16));
@@ -212,19 +258,33 @@ void drawChrome() {
   // Progress bar along the bottom
   const int barW = PW - 56;
   canvas.drawFastHLine(28, PH - 20, barW, BLACK);
-  canvas.fillRect(28, PH - 22, barW * (page + 1) / book.pageCount(), 5, BLACK);
+  canvas.fillRect(28, PH - 22, barW * (page + 1) / pageCount(), 5, BLACK);
 }
 
 void renderPage() {
+  batt = battery::read();
+  if (xtcMode) {
+    // The page already includes its own footer; copy it straight into the frame buffer.
+    canvas.setRotation(uiRotation());
+    if (xbook.readPage(page, canvas.getBuffer(), FB_LEN, EpdUc8253::WIDTH, EpdUc8253::HEIGHT)) {
+      if (keysLeft) rotate180(canvas.getBuffer(), FB_LEN);
+    } else {
+      canvas.fillScreen(WHITE);
+      canvas.setTextColor(BLACK);
+      canvas.setFont(&NotoSerif28);
+      canvas.setCursor(28, 120);
+      canvas.print(String("Page ") + (page + 1) + ": " + xbook.error());
+    }
+    return;
+  }
   canvas.setRotation(3);
   canvas.fillScreen(WHITE);
   canvas.setTextColor(BLACK);
-  batt = battery::read();
   book.drawPage(canvas, LAYOUT, page);
   drawChrome();
 }
 
-void savePosition() { prefs.putUInt(posKey(bookPath).c_str(), book.pageStart(page)); }
+void savePosition() { prefs.putUInt(posKey(bookPath).c_str(), posOfPage(page)); }
 
 wake_frame::Meta frameMeta(const String& path, uint32_t pos) {
   return {esp_rom_crc32_le(0, (const uint8_t*)path.c_str(), path.length()), pos, (uint8_t)FONTS[fontIndex].px};
@@ -248,7 +308,7 @@ void showPage(Mode mode) {
   const uint32_t layoutMs = millis() - t0;
   epd.refresh(canvas.getBuffer(), mode);
   Serial.printf("[%7lu] page %d/%d  layout %lu ms + %s %lu ms   batt %u%% %d mA\n", (unsigned long)millis(), page + 1,
-                book.pageCount(), (unsigned long)layoutMs, EpdUc8253::modeName(epd.stats.used),
+                pageCount(), (unsigned long)layoutMs, EpdUc8253::modeName(epd.stats.used),
                 (unsigned long)epd.stats.totalMs, batt.percent, batt.mA);
   savePosition();
   saveTimeline((String(EpdUc8253::modeName(epd.stats.used)) + " " + epd.stats.totalMs + " ms").c_str());
@@ -260,7 +320,8 @@ void showPage(Mode mode) {
 
 // A titled list with one selected (inverted) row; scrolls to keep it visible.
 void drawList(const String& title, const std::vector<String>& rows, int selected, const char* hint) {
-  canvas.setRotation(3);
+  canvas.setRotation(uiRotation());  // menus follow the document's orientation
+  const int PW = canvas.width(), PH = canvas.height();
   canvas.fillScreen(WHITE);
   canvas.setTextColor(BLACK);
   canvas.setFont(UI_FONT);
@@ -292,14 +353,16 @@ void drawList(const String& title, const std::vector<String>& rows, int selected
 }
 
 std::vector<String> menuRows() {
-  return {"Contents", "Books", String("Text size: ") + FONTS[fontIndex].px + " px", "Clean screen"};
+  return {"Contents", "Books",
+          xtcMode ? String("Text size: fixed (pre-rendered)") : String("Text size: ") + FONTS[fontIndex].px + " px",
+          "Clean screen", String("Landscape: keys on the ") + (keysLeft ? "left" : "right")};
 }
 
 std::vector<String> contentsRows() {
   std::vector<String> r;
-  const int current = book.chapterForPage(page);
-  for (int i = 0; i < (int)book.chapters().size(); i++)
-    r.push_back(String(i == current ? "\x95 " : "   ") + book.chapters()[i].title);  // 0x95 = bullet
+  const int current = chapterAt(page);
+  for (int i = 0; i < numChapters(); i++)
+    r.push_back(String(i == current ? "\x95 " : "   ") + chapterTitle(i));  // 0x95 = bullet
   if (r.empty()) r.push_back("(no chapters found)");
   return r;
 }
@@ -307,11 +370,17 @@ std::vector<String> contentsRows() {
 std::vector<String> booksRows() {
   std::vector<String> r;
   for (const String& p : bookPaths) {
-    File f = SD.open(p);
-    const uint32_t size = f ? f.size() : 0;
-    f.close();
     const uint32_t pos = prefs.getUInt(posKey(p).c_str(), 0);
-    const int pct = size ? int(uint64_t(pos) * 100 / size) : 0;
+    int pct;
+    if (isXtc(p)) {  // position = page number
+      const int n = XtcBook::peekPageCount(SD, p.c_str());
+      pct = n ? (int(pos) + 1) * 100 / n : 0;
+    } else {         // position = byte offset
+      File f = SD.open(p);
+      const uint32_t size = f ? f.size() : 0;
+      f.close();
+      pct = size ? int(uint64_t(pos) * 100 / size) : 0;
+    }
     r.push_back(String(p == bookPath ? "\x95 " : "   ") + bookName(p) + "   " + pct + "%");
   }
   return r;
@@ -323,7 +392,7 @@ void showScreen(Mode mode) {
       renderPage();
       break;
     case Screen::Menu:
-      drawList(book.title(), menuRows(), sel, "Confirm select  Back close");
+      drawList(docTitle(), menuRows(), sel, "Confirm select  Back close");
       break;
     case Screen::Contents:
       drawList("Contents", contentsRows(), sel, "Confirm go  Back menu");
@@ -341,7 +410,7 @@ void showScreen(Mode mode) {
 int listLength() {
   switch (screen) {
     case Screen::Menu: return menuRows().size();
-    case Screen::Contents: return max<int>(1, book.chapters().size());
+    case Screen::Contents: return max(1, numChapters());
     case Screen::Books: return bookPaths.size();
     default: return 0;
   }
@@ -356,7 +425,8 @@ void setFont(int i) {
 
 // A short notice drawn with a FAST refresh (e.g. "Indexing...").
 void notice(const String& line) {
-  canvas.setRotation(3);
+  canvas.setRotation(uiRotation());
+  const int PW = canvas.width(), PH = canvas.height();
   canvas.fillScreen(WHITE);
   canvas.setTextColor(BLACK);
   canvas.setFont(&NotoSerif28);
@@ -391,7 +461,8 @@ void findBooks() {
     if (!dir || !dir.isDirectory()) continue;
     for (File f = dir.openNextFile(); f; f = dir.openNextFile()) {
       const String name = f.name();
-      if (!f.isDirectory() && (name.endsWith(".txt") || name.endsWith(".TXT"))) bookPaths.push_back(f.path());
+      if (!f.isDirectory() && (name.endsWith(".txt") || name.endsWith(".TXT") || isXtc(name)))
+        bookPaths.push_back(f.path());
     }
     if (!bookPaths.empty()) break;
   }
@@ -402,13 +473,25 @@ void findBooks() {
 
 // Open a book and go to its saved position.
 bool openBook(const String& path) {
-  if (!book.open(SD, path.c_str())) return false;
+  if (isXtc(path)) {
+    if (!xbook.open(SD, path.c_str())) {
+      Serial.printf("%s: %s\n", path.c_str(), xbook.error());
+      return false;
+    }
+    xtcMode = true;
+    Serial.printf("%s: XTC \"%s\", %d pages, %d chapters\n", path.c_str(), xbook.title().c_str(), xbook.pageCount(),
+                  (int)xbook.chapters().size());
+  } else {
+    if (!book.open(SD, path.c_str())) return false;
+    xtcMode = false;
+    bookPath = path;  // indexBook() names its cache after bookPath
+    indexBook();
+  }
   bookPath = path;
   prefs.putString("book", bookPath);
-  indexBook();
-  page = constrain(book.pageForOffset(prefs.getUInt(posKey(bookPath).c_str(), 0)), 0, book.pageCount() - 1);
+  page = constrain(pageOfPos(prefs.getUInt(posKey(bookPath).c_str(), 0)), 0, pageCount() - 1);
   pagesUntilClean = CLEAN_EVERY;
-  return book.pageCount() > 0;
+  return pageCount() > 0;
 }
 
 // ------------------------------------------------------------ bench, sleep ---
@@ -490,13 +573,14 @@ void goToSleep(const char* why) {
   while (digitalRead(pins::BTN_POWER) == LOW) delay(10);
 
   // Leave the current page on the glass with a small banner (e-paper keeps it at 0 W).
-  if (book.pageCount() > 0) {
+  if (pageCount() > 0) {
     screen = Screen::Reading;
     renderPage();
+    const int PW = canvas.width(), PH = canvas.height();
     // Keep the clean page (no banner) in flash: the next wake can show it
     // before the SD card has started.
     const uint32_t t = millis();
-    const bool ok = wake_frame::save(canvas.getBuffer(), FB_LEN, frameMeta(bookPath, book.pageStart(page)));
+    const bool ok = wake_frame::save(canvas.getBuffer(), FB_LEN, frameMeta(bookPath, posOfPage(page)));
     prefs.putString("frameSave", String(ok ? "ok " : "FAILED ") + (millis() - t) + " ms");
     canvas.fillRect(28, PH - 80, PW - 56, 44, WHITE);
     canvas.drawRect(28, PH - 80, PW - 56, 44, BLACK);
@@ -539,15 +623,21 @@ void collect(Actions& a) {
     const KeyEvent k = keyQueue[qHead];
     qHead = (qHead + 1) % 16;
     const bool tap = k.e == ButtonEvent::Released && k.held < Buttons::LONG_PRESS_MS;
-    const bool fwd = k.b == Button::Right || k.b == Button::Down;
-    const bool rev = k.b == Button::Left || k.b == Button::Up;
+    // "next" = the LOWER key as the device is held. Portrait and keys-left
+    // landscape: Right/Down. Keys-right landscape turns the key column upside
+    // down, so Left/Up are the lower ones there.
+    const bool flipKeys = xtcMode && !keysLeft;
+    const Button nextKey = flipKeys ? Button::Left : Button::Right;
+    const Button prevKey = flipKeys ? Button::Right : Button::Left;
+    const bool fwd = k.b == nextKey || k.b == (flipKeys ? Button::Up : Button::Down);
+    const bool rev = k.b == prevKey || k.b == (flipKeys ? Button::Down : Button::Up);
 
     if (k.e == ButtonEvent::LongPress && k.b == Button::Power) a.sleep = true;
     if (screen == Screen::Reading) {
       if (k.e == ButtonEvent::Pressed && fwd) a.pageDelta++;
       if (k.e == ButtonEvent::Pressed && rev) a.pageDelta--;
-      if (k.e == ButtonEvent::LongPress && k.b == Button::Right) a.pageDelta += 9;  // + the press = 10
-      if (k.e == ButtonEvent::LongPress && k.b == Button::Left) a.pageDelta -= 9;
+      if (k.e == ButtonEvent::LongPress && k.b == nextKey) a.pageDelta += 9;  // + the press = 10
+      if (k.e == ButtonEvent::LongPress && k.b == prevKey) a.pageDelta -= 9;
       if (k.e == ButtonEvent::LongPress && k.b == Button::Confirm) a.bench = true;
       if (tap && k.b == Button::Back) a.back = true;  // = open the menu
     } else {
@@ -577,7 +667,7 @@ void handle(const Actions& a) {
     if (a.back) {
       enter(Screen::Menu, 0);
     } else if (a.pageDelta != 0) {
-      const int target = constrain(page + a.pageDelta, 0, book.pageCount() - 1);
+      const int target = constrain(page + a.pageDelta, 0, pageCount() - 1);
       if (target != page) {
         page = target;
         showScreen(Mode::Fast);
@@ -599,13 +689,14 @@ void handle(const Actions& a) {
   if (a.select) {
     if (screen == Screen::Menu) {
       switch (sel) {
-        case 0: enter(Screen::Contents, max(0, book.chapterForPage(page))); break;
+        case 0: enter(Screen::Contents, max(0, chapterAt(page))); break;
         case 1: {
           const auto it = std::find(bookPaths.begin(), bookPaths.end(), bookPath);
           enter(Screen::Books, it == bookPaths.end() ? 0 : int(it - bookPaths.begin()));
           break;
         }
         case 2: {  // next text size, keep the first word on screen
+          if (xtcMode) break;  // pre-rendered: the size is fixed
           const uint32_t pos = book.pageStart(page);
           setFont((fontIndex + 1) % NUM_FONTS);
           prefs.putUChar("font", fontIndex);
@@ -619,10 +710,15 @@ void handle(const Actions& a) {
           pagesUntilClean = CLEAN_EVERY;
           showScreen(Mode::Resync);
           break;
+        case 4:  // turn landscape pages (and menus) 180 degrees
+          keysLeft = !keysLeft;
+          prefs.putBool("keysLeft", keysLeft);
+          showScreen(xtcMode ? Mode::Half : Mode::Fast);  // whole screen turns over
+          break;
       }
     } else if (screen == Screen::Contents) {
-      if (!book.chapters().empty()) {
-        page = book.pageForOffset(book.chapters()[sel].offset);
+      if (numChapters() > 0) {
+        page = chapterPage(sel);
         screen = Screen::Reading;
         showScreen(Mode::Half);
       }
@@ -678,6 +774,7 @@ void setup() {
   Serial.printf("previous wake timeline: %s\n", prefs.getString("wake", "(none)").c_str());
   Serial.printf("last frame save at sleep: %s\n", prefs.getString("frameSave", "(none)").c_str());
   setFont(constrain(prefs.getUChar("font", 0), 0, NUM_FONTS - 1));
+  keysLeft = prefs.getBool("keysLeft", true);
   const bool cleanWake = wakeBoot && prefs.getBool("cleanSleep", false);
   if (prefs.getBool("cleanSleep", false)) prefs.putBool("cleanSleep", false);
   const String lastBook = prefs.getString("book", "");
@@ -746,7 +843,7 @@ void setup() {
 
 void loop() {
   buttons.update();
-  if (book.pageCount() == 0) {
+  if (pageCount() == 0) {
     delay(10);
     return;
   }

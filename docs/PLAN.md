@@ -1,11 +1,14 @@
 # Xteink X3 bring-up — plan
 
 ## Resume here
-- **Position:** Housekeeping **done** after stage 11: lessons written, editor fixed (.clangd), G55 in the skill.
-- **Lessons:** docs/lesson-01-identify-backup-probe.md, -02-epaper, -03-buttons, -04-reader, -05-power.
-- **Parked:** long-press redesign (see open questions).
-- **Next (pick):** .xtc support, long-press redesign, or anything new.
-- **Editor:** `pio run -t compiledb` + `.clangd` (RISC-V include dirs); `clangd --check=src/main.cpp` -> 0 errors.
+- **Position:** Stage 12 (lessons on the X3 as XTC) **done** — snapshot stages/12-xtc-lessons.
+- **Pipeline:** `tools/mdpages.py docs/lesson-NN.md build/pages/X --xtc build/xtc/X.xtc` (landscape default,
+  body 28 px, tables 25, code 24, symbol fallbacks) -> copy .xtc to /books -> X3 page viewer (page copied
+  straight into the frame buffer). Check files with `tools/xtcinfo.py file.xtc pngdir` (bit-for-bit).
+  Deps: tools/requirements.txt. Orientation: keys on the LEFT (Power right); lower page key = next.
+- **Project goals:** see memory xteink3-project-goals (lessons on the bus; marimo talking points + two-way clicker).
+- **Next (pick):** USB-serial sync of .xtc files (no card swaps); marimo test deck + speaker-notes export;
+  spike: can a laptop helper reach reveal.js inside marimo's page?
 - **Git:** commit per stage locally; the USER pushes (never push — see memory).
 - **Workflow notes:** stop any follow_serial capture before uploading (it holds the port); don't `pkill -f` a pattern
   that's in your own shell's command line. When copying to SD: /books at card ROOT, and eject before removing.
@@ -42,6 +45,9 @@
 16. Stage 11 faster wake: hypothesis "25 MHz fails cold" falsified (card's own 648 ms init). Saved frame + refresh
     overlapping SD: visible 1.82 -> 0.83 s; settle via BUSY ISR: ready 1.30 -> 1.10 s (predicted 1.10).
     Two user tests didn't reach the new code (ran before flash / no unplug) — confirm via kernel USB log + NVS markers.
+18. Stage 12 XTC lessons: PC renders Markdown -> 1-bit landscape pages (same FreeType mono as the device fonts),
+    exports Xteink XTC (format from CrossPoint); independent checker: 0 mismatches over 67 pages. X3 viewer + menu
+    orientation setting; tables readable at 25 px; keys-left preferred, lower key = next.
 17. Housekeeping: 5 lesson docs; .clangd for the C3 (thousands of clangd errors -> 0); skill updated:
     G55 (QIO/DIO boot loop), G43 RISC-V variant, G42 X3 example, template note.
 
