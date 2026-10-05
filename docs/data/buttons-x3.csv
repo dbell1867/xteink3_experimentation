@@ -1,0 +1,10 @@
+button,gpio,raw_adc_x3,raw_adc_x4_avg
+none,1,4095,
+none,2,4095,
+back,1,3483,3512
+confirm,1,2663,2694
+left,1,1469,1493
+right,1,0,5
+up,2,2207,2242
+down,2,4,5
+power,3,LOW when pressed,

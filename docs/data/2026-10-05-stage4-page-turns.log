@@ -1,0 +1,38 @@
+capture still running!
+========================= [SUCCESS] Took 6.79 seconds =========================
+11:04:21 [11:04:21] -- port up --
+11:04:21 [11:04:21] === Xteink X3 stage 4: page turns ===
+11:04:24 [11:04:24] [   3085] page   1  FULL          total 2383 ms = upload  89 + power-on 126 + waveform  925 + extra 1242
+11:04:54 [11:04:54] [  33139] idle: panel rails off
+11:06:08 [11:06:08] [ 106645] page   2  HALF   (asked FAST    total  869 ms = upload  45 + power-on 126 + waveform  454 + extra  244, rails were off
+11:06:09 [11:06:09] [ 107995] page   3  FAST          total  467 ms = upload  45 + power-on   0 + waveform  378 + extra   44
+11:06:11 [11:06:11] [ 109878] page   4  FAST          total  467 ms = upload  45 + power-on   0 + waveform  378 + extra   44
+11:06:13 [11:06:13] [ 111736] page   5  FAST          total  467 ms = upload  45 + power-on   0 + waveform  378 + extra   44
+11:06:14 [11:06:14] [ 113494] page   6  FAST          total  467 ms = upload  45 + power-on   0 + waveform  378 + extra   44
+11:06:16 [11:06:16] [ 115195] page   7  FAST          total  468 ms = upload  45 + power-on   0 + waveform  379 + extra   44
+11:06:18 [11:06:18] [ 116616] page   8  FAST          total  467 ms = upload  45 + power-on   0 + waveform  378 + extra   44
+11:06:19 [11:06:19] [ 118189] page   9  FAST          total  467 ms = upload  45 + power-on   0 + waveform  378 + extra   44
+11:06:49 [11:06:49] [ 147796] page   8  FAST          total  467 ms = upload  45 + power-on   0 + waveform  378 + extra   44
+11:07:02 [11:07:02] [ 160852] page   8  FULL          total 1727 ms = upload  90 + power-on   0 + waveform  925 + extra  712
+11:07:32 [11:07:32] [ 190906] idle: panel rails off
+11:08:25 [11:08:25] turn mode -> NORMAL
+11:08:26 [11:08:26] [ 244776] page   8  HALF   (asked NORMAL  total  870 ms = upload  45 + power-on 127 + waveform  454 + extra  244, rails were off
+11:08:28 [11:08:28] [ 246913] page   9  NORMAL        total  743 ms = upload  45 + power-on   0 + waveform  454 + extra  244
+11:08:30 [11:08:30] [ 249055] page  10  NORMAL        total  744 ms = upload  45 + power-on   0 + waveform  454 + extra  244
+11:08:31 [11:08:31] [ 250303] page  11  NORMAL        total  744 ms = upload  45 + power-on   0 + waveform  455 + extra  244
+11:08:32 [11:08:32] [ 251423] page  12  NORMAL        total  744 ms = upload  45 + power-on   0 + waveform  455 + extra  244
+11:08:34 [11:08:34] [ 252558] page  13  NORMAL        total  744 ms = upload  45 + power-on   0 + waveform  455 + extra  244
+11:08:35 [11:08:35] [ 254136] page  14  NORMAL        total  744 ms = upload  45 + power-on   0 + waveform  455 + extra  244
+11:08:36 [11:08:36] [ 254835] page  15  NORMAL        total  464 ms = upload  45 + power-on   0 + waveform  175 + extra  244
+11:08:38 [11:08:38] [ 256635] page  16  NORMAL        total  744 ms = upload  46 + power-on   0 + waveform  454 + extra  244
+11:08:39 [11:08:39] [ 258316] page  17  NORMAL        total  744 ms = upload  45 + power-on   0 + waveform  455 + extra  244
+11:08:41 [11:08:41] [ 259919] page  18  NORMAL        total  744 ms = upload  45 + power-on   0 + waveform  455 + extra  244
+11:08:43 [11:08:43] [ 261837] page  19  NORMAL        total  744 ms = upload  45 + power-on   0 + waveform  455 + extra  244
+11:08:45 [11:08:45] [ 263928] page  20  NORMAL        total  744 ms = upload  46 + power-on   0 + waveform  454 + extra  244
+11:09:15 [11:09:15] [ 293982] idle: panel rails off
+11:09:45 [11:09:45] [ 323814] page  19  HALF   (asked NORMAL  total  870 ms = upload  45 + power-on 127 + waveform  454 + extra  244, rails were off
+11:09:48 [11:09:48] [ 326573] page  18  NORMAL        total  744 ms = upload  45 + power-on   0 + waveform  455 + extra  244
+11:09:49 [11:09:49] [ 328231] page  17  NORMAL        total  744 ms = upload  45 + power-on   0 + waveform  455 + extra  244
+11:09:50 [11:09:50] [ 328930] page  16  NORMAL        total  658 ms = upload  46 + power-on   0 + waveform  368 + extra  244
+11:09:51 [11:09:51] [ 329719] page  15  NORMAL        total  744 ms = upload  45 + power-on   0 + waveform  455 + extra  244
+11:10:08 [11:10:08] [ 346850] page  15  FULL          total 1727 ms = upload  89 + power-on   0 + waveform  926 + extra  712

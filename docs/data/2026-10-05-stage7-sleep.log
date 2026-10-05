@@ -1,0 +1,21 @@
+11:58:35 [11:58:35] -- port up --
+11:58:43 [11:58:43] [  33521] idle: panel rails off
+11:59:03 [11:59:03] [  53508] page 2/156  layout 50 ms + HALF 869 ms   batt 100% 4351 mV -22 mA
+11:59:06 [11:59:06] [  55612] page 3/156  layout 54 ms + FAST 468 ms   batt 100% 4351 mV -22 mA
+11:59:11 [11:59:11] -- port gone (asleep) --
+11:59:34 [11:59:34] -- port up --
+11:59:36 [11:59:36] [  14888] sleep (Power held): batt 100% 4384 mV 83 mA
+11:59:38 [11:59:38] -- port gone (asleep) --
+11:59:51 [11:59:51] -- port up --
+11:59:51 [11:59:51]   /books:
+11:59:51 [11:59:51]     alice.txt  174311 bytes
+11:59:52 [11:59:52] /books/alice.txt: "Alice's Adventures in Wonderland" -> 156 pages, indexed in 597 ms, free heap 193280
+11:59:54 [11:59:54] [   3615] page 5/156  layout 64 ms + RESYNC 2384 ms   batt 100% 4384 mV 65 mA
+12:00:24 [12:00:24] [  33669] idle: panel rails off
+12:00:49 [12:00:49] -- port gone (asleep) --
+12:02:15 [12:02:15] -- port up --
+12:02:18 [12:02:18] -- port gone (asleep) --
+12:02:19 [12:02:19] -- port up --
+12:04:36 [12:04:36] -- port gone (asleep) --
+12:04:43 [12:04:43] -- port up --
+12:05:09 [12:05:09] [ 221103] idle: panel rails off

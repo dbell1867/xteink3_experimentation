@@ -1,0 +1,52 @@
+11:14:50 [11:14:50] -- port up --
+11:14:51 [11:14:51] [   5126] page   2  FAST   total  468 ms (wave  379)  [stress]
+11:14:52 [11:14:52] [   5920] page   3  FAST   total  467 ms (wave  378)  [stress]
+11:14:52 [11:14:52] [   6712] page   4  FAST   total  467 ms (wave  378)  [stress]
+11:14:53 [11:14:53] [   7501] page   5  FAST   total  467 ms (wave  378)  [stress]
+11:14:54 [11:14:54] [   8294] page   6  FAST   total  467 ms (wave  378)  [stress]
+11:14:55 [11:14:55] [   9085] page   7  FAST   total  468 ms (wave  379)  [stress]
+11:14:56 [11:14:56] [   9872] page   8  FAST   total  468 ms (wave  379)  [stress]
+11:14:56 [11:14:56] [  10665] page   9  FAST   total  467 ms (wave  378)  [stress]
+11:14:57 [11:14:57] [  11455] page  10  FAST   total  468 ms (wave  379)  [stress]
+11:14:58 [11:14:58] [  12247] page  11  FAST   total  467 ms (wave  378)  [stress]
+11:14:59 [11:14:59] [  13041] page  12  FAST   total  468 ms (wave  379)  [stress]
+11:15:00 [11:15:00] [  13831] page  13  FAST   total  468 ms (wave  379)  [stress]
+11:15:00 [11:15:00] [  14623] page  14  FAST   total  468 ms (wave  378)  [stress]
+11:15:01 [11:15:01] [  15416] page  15  FAST   total  468 ms (wave  379)  [stress]
+11:15:02 [11:15:02] [  16205] page  16  FAST   total  468 ms (wave  379)  [stress]
+11:15:03 [11:15:03] [  16995] page  17  FAST   total  468 ms (wave  379)  [stress]
+11:15:04 [11:15:04] [  17793] page  18  FAST   total  468 ms (wave  379)  [stress]
+11:15:04 [11:15:04] [  18583] page  19  FAST   total  468 ms (wave  379)  [stress]
+11:15:05 [11:15:05] [  19372] page  20  FAST   total  468 ms (wave  379)  [stress]
+11:15:06 [11:15:06] [  20169] page  21  FAST   total  468 ms (wave  378)  [stress]
+11:15:06 [11:15:06] stress test done
+11:15:36 [11:15:36] [  50223] idle: panel rails off
+11:16:01 [11:16:01] [  75424] page  21  HALF   total  870 ms (wave  454)
+11:16:31 [11:16:31] [ 105478] idle: panel rails off
+11:16:36 [11:16:36] stress test: 20 FAST turns
+11:16:37 [11:16:37] [ 110998] page  22  HALF   total  870 ms (wave  454)  [stress]  upgraded: rails were off
+11:16:38 [11:16:38] [ 111788] page  23  FAST   total  468 ms (wave  379)  [stress]
+11:16:38 [11:16:38] [ 112583] page  24  FAST   total  468 ms (wave  379)  [stress]
+11:16:39 [11:16:39] [ 113375] page  25  FAST   total  468 ms (wave  379)  [stress]
+11:16:40 [11:16:40] [ 114164] page  26  FAST   total  468 ms (wave  379)  [stress]
+11:16:41 [11:16:41] [ 114958] page  27  FAST   total  468 ms (wave  379)  [stress]
+11:16:41 [11:16:41] [ 115750] page  28  FAST   total  467 ms (wave  378)  [stress]
+11:16:42 [11:16:42] [ 116537] page  29  FAST   total  468 ms (wave  378)  [stress]
+11:16:43 [11:16:43] [ 117331] page  30  FAST   total  468 ms (wave  379)  [stress]
+11:16:44 [11:16:44] [ 118121] page  31  FAST   total  468 ms (wave  379)  [stress]
+11:16:45 [11:16:45] [ 118914] page  32  FAST   total  468 ms (wave  379)  [stress]
+11:16:45 [11:16:45] [ 119708] page  33  FAST   total  468 ms (wave  379)  [stress]
+11:16:46 [11:16:46] [ 120497] page  34  FAST   total  468 ms (wave  379)  [stress]
+11:16:47 [11:16:47] [ 121288] page  35  FAST   total  467 ms (wave  378)  [stress]
+11:16:48 [11:16:48] [ 122081] page  36  FAST   total  468 ms (wave  378)  [stress]
+11:16:49 [11:16:49] [ 122870] page  37  FAST   total  468 ms (wave  379)  [stress]
+11:16:49 [11:16:49] [ 123660] page  38  FAST   total  468 ms (wave  379)  [stress]
+11:16:50 [11:16:50] [ 124457] page  39  FAST   total  468 ms (wave  379)  [stress]
+11:16:51 [11:16:51] [ 125247] page  40  FAST   total  468 ms (wave  379)  [stress]
+11:16:52 [11:16:52] [ 126036] page  41  FAST   total  468 ms (wave  379)  [stress]
+11:16:52 [11:16:52] stress test done
+11:16:55 [11:16:55] [ 129273] page  41  HALF   total  743 ms (wave  454)
+11:17:02 [11:17:02] [ 136245] page  41  RESYNC total 2259 ms (wave  926)
+11:17:32 [11:17:32] [ 166299] idle: panel rails off
+
+[exited with code 144]

@@ -1,0 +1,9 @@
+phase,usb_boot_before_ms,battery_wake_before_ms,usb_boot_after_ms,battery_wake_after_ms
+serial wait,1,990,1,0
+display init,223,223,223,223
+sd mount (+settle/gauge),198,799,47,648
+find book,,,10,10
+index,599,599,3,3
+layout + first refresh,2456,2456,2453,940
+total app start -> page shown,3491,5082,2751,1839
+first refresh mode,RESYNC,RESYNC,RESYNC,HALF (clean wake)

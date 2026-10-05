@@ -1,0 +1,79 @@
+// Minimal UC8253 driver for the Xteink X3 panel (792x528, 1 bit per pixel).
+// Follows freeink-sdk's Uc8253X3Driver; see docs/hardware-x3.md.
+//
+// Refresh modes (fastest last):
+//   Full   - OEM full waveform from a white baseline: flashes, cleanest, ~1.2 s
+//   Half   - "scrub": drives every pixel to its target, ignores the old frame
+//   Normal - OEM differential page-turn: only changed pixels move
+//   Fast   - community "turbo" differential page-turn
+// Differential modes need the controller's "old" plane (DTM1) to hold what is
+// on the glass; the driver tracks that and upgrades the mode when it can't.
+#pragma once
+#include <Arduino.h>
+
+class EpdUc8253 {
+ public:
+  static constexpr uint16_t WIDTH = 792;
+  static constexpr uint16_t HEIGHT = 528;
+  static constexpr uint16_t ROW_BYTES = WIDTH / 8;  // 99 bytes per row
+
+  enum class Mode : uint8_t { Full, Half, Normal, Fast };
+  static const char* modeName(Mode m);
+
+  // What the last refresh() did and how long each part took.
+  struct Stats {
+    Mode requested = Mode::Full;
+    Mode used = Mode::Full;   // differs from requested if the driver upgraded it
+    const char* why = "";     // reason for an upgrade
+    uint32_t uploadMs = 0;    // LUTs + image over SPI
+    uint32_t powerOnMs = 0;   // 0 if the rails were already on
+    uint32_t waveformMs = 0;  // the visible refresh (BUSY low)
+    uint32_t extraMs = 0;     // settle delay, conditioning passes, DTM1 sync
+    uint32_t totalMs = 0;
+  };
+
+  void begin();  // SPI + reset + controller init (both RAM planes white)
+
+  // Show a frame. fb: HEIGHT rows of ROW_BYTES, MSB = leftmost pixel, 1 = white.
+  // Leaves the panel's high-voltage rails ON; call powerOff() when idle.
+  void refresh(const uint8_t* fb, Mode mode);
+  void powerOff();
+  bool powered() const { return isPowered; }
+
+  // Called every ~1 ms while waiting on BUSY, so other work (e.g. reading
+  // buttons) keeps running during a refresh. nullptr = none.
+  void setIdleHook(void (*hook)()) { idleHook = hook; }
+
+  Stats stats;
+
+ private:
+  struct LutBank {
+    const uint8_t* vcom;
+    const uint8_t* ww;
+    const uint8_t* bw;
+    const uint8_t* wb;
+    const uint8_t* bb;
+  };
+
+  bool isPowered = false;
+  bool oldPlaneValid = false;  // DTM1 holds what's on the glass
+  bool firstFullDone = false;  // first FULL after begin() gets an extra conditioning pass
+
+  void (*idleHook)() = nullptr;  // pointer to a function (Python: a callback)
+  void idle() {
+    if (idleHook) idleHook();
+    delay(1);
+  }
+
+  void cmd(uint8_t c);
+  void data(uint8_t d);
+  void cmdData(uint8_t c, const uint8_t* d, size_t len);
+  void fillPlane(uint8_t ramCmd, uint8_t value);
+  void sendPlaneFlipped(uint8_t ramCmd, const uint8_t* fb);
+  void loadBank(uint8_t cdi0, const LutBank& bank);
+  void fullScreenWindowIn();
+  uint32_t powerOnIfNeeded();
+  uint32_t runWaveform();
+  void reset();
+  uint32_t waitBusyTwoPhase(uint32_t startTimeoutMs = 1000, uint32_t workTimeoutMs = 30000);
+};

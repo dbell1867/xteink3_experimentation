@@ -1,0 +1,4 @@
+condition,ghost_rating_0to3,refresh_ms,notes
+after 20 FAST turns,2,467,stress test; no clean-up
+HALF clean-up,1,743,870 ms if rails were off
+RESYNC clean-up,0,2259,FULL + OEM normal conditioning pass + FAST settle

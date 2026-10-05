@@ -1,0 +1,28 @@
+10:30:23.303 [10:30:23] -- port up --
+10:30:25.080 [10:30:25]   GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:30.095 [10:30:30]   GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:33.002 [10:30:32] * GPIO1=3483 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:33.250 [10:30:33] * GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:34.555 [10:30:34] * GPIO1=2663 (Confirm?    ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:34.755 [10:30:34] * GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:35.910 [10:30:35] * GPIO1=1469 (Left?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:36.160 [10:30:36] * GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:37.110 [10:30:37] * GPIO1=   0 (Right?/idle?) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:37.310 [10:30:37] * GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:39.315 [10:30:39] * GPIO1=4095 (Back?       ) GPIO2=2207 (Up?        ) POWER(GPIO3)=up
+10:30:39.565 [10:30:39] * GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:40.620 [10:30:40] * GPIO1=4095 (Back?       ) GPIO2=   4 (Down?/idle?) POWER(GPIO3)=up
+10:30:40.821 [10:30:40] * GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:42.124 [10:30:42] * GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=PRESSED
+10:30:42.325 [10:30:42] * GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:47.335 [10:30:47]   GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:52.350 [10:30:52]   GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:30:57.360 [10:30:57]   GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:31:02.375 [10:31:02]   GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:31:07.383 [10:31:07]   GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:31:12.398 [10:31:12]   GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:31:17.408 [10:31:17]   GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:31:22.422 [10:31:22]   GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:31:27.433 [10:31:27]   GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:31:32.447 [10:31:32]   GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up
+10:31:37.458 [10:31:37]   GPIO1=4095 (Back?       ) GPIO2=4095 (Up?        ) POWER(GPIO3)=up

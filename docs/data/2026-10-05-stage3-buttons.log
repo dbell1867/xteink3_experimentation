@@ -1,0 +1,59 @@
+========================= [SUCCESS] Took 7.02 seconds =========================
+10:56:44 [10:56:44] -- port up --
+10:56:44 [10:56:44] === Xteink X3 stage 3: buttons ===
+10:56:44 [10:56:44] boot #2, reset reason: USB
+10:56:45 [10:56:45] [   1895] screen refresh #1 took 1193 ms
+10:57:25 [10:57:25] [  41565] Back     pressed  held    0 ms
+10:57:25 [10:57:25] [  41742] Back     released held  177 ms  (during refresh)
+10:57:26 [10:57:26] [  42776] screen refresh #2 took 1194 ms
+10:57:31 [10:57:31] [  47664] Confirm  pressed  held    0 ms
+10:57:31 [10:57:31] [  47891] Confirm  released held  227 ms  (during refresh)
+10:57:32 [10:57:32] [  48875] screen refresh #3 took 1193 ms
+10:57:34 [10:57:34] [  50501] Left     pressed  held    0 ms
+10:57:34 [10:57:34] [  50733] Left     released held  232 ms  (during refresh)
+10:57:35 [10:57:35] [  51711] screen refresh #4 took 1193 ms
+10:57:37 [10:57:37] [  53262] Right    pressed  held    0 ms
+10:57:37 [10:57:37] [  53454] Right    released held  192 ms  (during refresh)
+10:57:38 [10:57:38] [  54473] screen refresh #5 took 1194 ms
+10:57:39 [10:57:39] [  55399] Up       pressed  held    0 ms
+10:57:39 [10:57:39] [  55641] Up       released held  242 ms  (during refresh)
+10:57:40 [10:57:40] [  56609] screen refresh #6 took 1193 ms
+10:57:42 [10:57:42] [  58245] Down     pressed  held    0 ms
+10:57:42 [10:57:42] [  58482] Down     released held  237 ms  (during refresh)
+10:57:43 [10:57:43] [  59455] screen refresh #7 took 1193 ms
+10:57:44 [10:57:44] [  60641] Power    pressed  held    0 ms
+10:57:44 [10:57:44] [  60838] Power    released held  197 ms  (during refresh)
+10:57:45 [10:57:45] [  61851] screen refresh #8 took 1193 ms
+10:58:17 [10:58:17] [  93252] Left     pressed  held    0 ms
+10:58:17 [10:58:17] [  93414] Left     released held  162 ms  (during refresh)
+10:58:17 [10:58:17] [  93504] Left     pressed  held    0 ms  (during refresh)
+10:58:17 [10:58:17] [  93634] Left     released held  130 ms  (during refresh)
+10:58:18 [10:58:18] [  94462] screen refresh #9 took 1193 ms
+10:58:19 [10:58:19] [  95678] screen refresh #10 took 1193 ms
+10:58:28 [10:58:28] [ 104467] Right    pressed  held    0 ms
+10:58:28 [10:58:28] [ 104649] Right    released held  182 ms  (during refresh)
+10:58:29 [10:58:29] [ 105434] Right    pressed  held    0 ms  (during refresh)
+10:58:29 [10:58:29] [ 105569] Right    released held  135 ms  (during refresh)
+10:58:29 [10:58:29] [ 105678] screen refresh #11 took 1194 ms
+10:58:30 [10:58:30] [ 106816] Right    pressed  held    0 ms  (during refresh)
+10:58:30 [10:58:30] [ 106894] screen refresh #12 took 1193 ms
+10:58:31 [10:58:31] [ 107022] Right    released held  206 ms  (during refresh)
+10:58:31 [10:58:31] [ 107582] Right    pressed  held    0 ms  (during refresh)
+10:58:31 [10:58:31] [ 107762] Right    released held  180 ms  (during refresh)
+10:58:32 [10:58:32] [ 108105] screen refresh #13 took 1193 ms
+10:58:33 [10:58:33] [ 109322] screen refresh #14 took 1194 ms
+10:58:47 [10:58:47] [ 123228] Right    pressed  held    0 ms
+10:58:47 [10:58:47] [ 123930] Right    LONG     held  702 ms  (during refresh)
+10:58:48 [10:58:48] [ 124439] screen refresh #15 took 1194 ms
+10:58:49 [10:58:49] [ 125422] Right    released held 2194 ms  (during refresh)
+10:58:49 [10:58:49] [ 125655] screen refresh #16 took 1193 ms
+10:58:51 [10:58:51] [ 127281] Right    pressed  held    0 ms
+10:58:52 [10:58:52] [ 127983] Right    LONG     held  702 ms  (during refresh)
+10:58:52 [10:58:52] [ 128492] screen refresh #17 took 1194 ms
+10:58:53 [10:58:53] [ 129135] Right    released held 1854 ms  (during refresh)
+10:58:53 [10:58:53] [ 129709] screen refresh #18 took 1194 ms
+11:00:09 [11:00:09] [ 205796] Power    pressed  held    0 ms
+11:00:10 [11:00:10] [ 206498] Power    LONG     held  702 ms  (during refresh)
+11:00:11 [11:00:11] [ 207007] screen refresh #19 took 1193 ms
+11:00:12 [11:00:12] [ 208224] screen refresh #20 took 1194 ms
+11:00:15 [11:00:15] [ 210994] Power    released held 5198 ms
