@@ -2,11 +2,14 @@
 
 #include <driver/gpio.h>
 #include <esp_sleep.h>
+#include <esp_timer.h>
 
 #include "battery.h"
 #include "board_pins.h"
 
 namespace power_bench {
+
+SleepStats stats = {};
 
 bool lightSleep(uint32_t ms) {
   const auto latch = static_cast<gpio_num_t>(pins::SD_POWER);
@@ -15,9 +18,21 @@ bool lightSleep(uint32_t ms) {
   esp_sleep_enable_timer_wakeup(uint64_t(ms) * 1000);
   gpio_wakeup_enable(power, GPIO_INTR_LOW_LEVEL);  // level-triggered (G17d)
   esp_sleep_enable_gpio_wakeup();
-  esp_light_sleep_start();  // returns here on wake; RAM and state intact
+  const int64_t t0 = esp_timer_get_time();
+  const esp_err_t err = esp_light_sleep_start();  // returns here on wake; RAM and state intact
+  const int64_t slept = esp_timer_get_time() - t0;
   gpio_hold_dis(latch);
-  const bool byKey = esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO;
+  const esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
+  const bool byKey = cause == ESP_SLEEP_WAKEUP_GPIO;
+  stats.sleeps++;
+  if (err != ESP_OK) {
+    stats.rejected++;
+    stats.lastErr = err;
+  }
+  stats.sleptUs += slept;
+  if (cause == ESP_SLEEP_WAKEUP_TIMER) stats.byTimer++;
+  else if (byKey) stats.byGpio++;
+  else stats.byOther++;
   // Wake sources persist: left armed, the 50 ms timer would also end the
   // reader's later DEEP sleep after 50 ms. Disarm everything we armed.
   esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
@@ -75,6 +90,7 @@ void run(Result results[NUM_MODES], void (*panelRails)(bool on)) {
     int32_t sum = 0;
     int16_t lo = 32767, hi = -32768;
     uint32_t n = 0;
+    stats = {};  // count only the measurement window
     hold(m, MEASURE_MS, [&] {  // [&]: the lambda can modify sum/lo/hi/n
       const BatteryReading b = battery::read();
       if (!b.ok) return;
@@ -85,6 +101,14 @@ void run(Result results[NUM_MODES], void (*panelRails)(bool on)) {
       n++;
     });
     results[i] = {m.name, n ? float(sum) / n : 0.0f, lo, hi, n};
+    if (m.kind == Kind::Sleep) {
+      results[i].sleeps = stats.sleeps;
+      results[i].rejected = stats.rejected;
+      results[i].avgSleptUs = stats.sleeps ? uint32_t(stats.sleptUs / stats.sleeps) : 0;
+      results[i].byTimer = stats.byTimer;
+      results[i].byGpio = stats.byGpio;
+      results[i].byOther = stats.byOther;
+    }
   }
   panelRails(false);
   setCpuFrequencyMhz(160);

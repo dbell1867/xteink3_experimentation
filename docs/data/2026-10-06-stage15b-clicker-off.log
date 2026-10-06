@@ -1,0 +1,512 @@
+watching 
+09:28:54 LAPTOP  Connected: yes
+09:28:54 X3  [09:28:54] -- port up --
+09:29:19 X3  [09:29:19] [  32793] idle: panel rails off
+09:29:33 X3  [09:29:33] [  47021] glitch ladder1: saw Back (raw 3566) for 5 ms, now None (raw 4095)
+09:29:38 X3  [09:29:38] clicker on: heap 142172 -> 60032
+09:29:47 X3  [09:29:47] [  61016] clicker: laptop connected
+09:30:18 X3  [09:30:18] [  91573] idle: panel rails off
+09:30:38 X3  [09:30:38] Guru Meditation Error: Core  0 panic'ed (Load access fault). Exception was unhandled.
+09:30:38 X3  [09:30:38] Core  0 register dump:
+09:30:38 X3  [09:30:38] MEPC    : 0x42004a32  RA      : 0x42008d3a  SP      : 0x3fcccbd0  GP      : 0x3fc96a00
+09:30:38 X3  [09:30:38] TP      : 0x3fcccf60  T0      : 0x4005890e  T1      : 0x0000000f  T2      : 0x34000102
+09:30:38 X3  [09:30:38] S0/FP   : 0x3fcccc58  S1      : 0x3fccee3c  A0      : 0x00000000  A1      : 0x3fccd2a4
+09:30:38 X3  [09:30:38] A2      : 0x3fccd2a4  A3      : 0x00000015  A4      : 0x0000000e  A5      : 0x3fccee3c
+09:30:38 X3  [09:30:38] A6      : 0x00000000  A7      : 0x000000ff  S2      : 0x3fc9c000  S3      : 0x3fccee44
+09:30:38 X3  [09:30:38] S4      : 0x00000000  S5      : 0x00000002  S6      : 0x00000008  S7      : 0x3fc9c000
+09:30:38 X3  [09:30:38] S8      : 0x00000000  S9      : 0x00000000  S10     : 0x00000000  S11     : 0x00000000
+09:30:38 X3  [09:30:38] T3      : 0x00000014  T4      : 0x3fc9c000  T5      : 0x3fc9c000  T6      : 0x01050b00
+09:30:38 X3  [09:30:38] MSTATUS : 0x00001881  MTVEC   : 0x40380001  MCAUSE  : 0x00000005  MTVAL   : 0x00000050
+09:30:38 X3  [09:30:38] MHARTID : 0x00000000
+09:30:38 X3  [09:30:38] Stack memory:
+09:30:38 X3  [09:30:38] 3fcccbd0: 0x3fce0000 0x00000000 0x00000000 0x00000000 0x00000004 0x00000000 0x3fcca714 0x4038d87c
+09:30:38 X3  [09:30:38] 3fcccbf0: 0x00000008 0x00000002 0x00000000 0x00000001 0x00000004 0x3fccd068 0x3fcca714 0x4038d308
+09:30:38 X3  [09:30:38] 3fcccc10: 0x00000039 0x00000000 0x3fcc4e14 0x42046abe 0x3fcc86e4 0x00000000 0x3fcccc58 0x765b3b85
+09:30:38 X3  [09:30:38] 3fcccc30: 0x00000000 0x00000002 0x00000000 0x00000001 0x00000004 0x00000000 0x00000004 0x4203e144
+09:30:38 X3  [09:30:38] 3fcccc50: 0x00000001 0x00000000 0x0000000e 0x00080001 0x00000402 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fcccc70: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fcccc90: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fccccb0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fccccd0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fccccf0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fcccd10: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fcccd30: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fcccd50: 0x00000000 0x00000000 0x00000000 0x765b3b85 0x3fccf894 0x3fccd068 0x3fcca714 0x00000000
+09:30:38 X3  [09:30:38] 3fcccd70: 0x00000000 0x3fccd2a4 0x00000003 0x00000000 0x3fccf894 0x3fccf894 0x00000001 0x42041060
+09:30:38 X3  [09:30:38] 3fcccd90: 0x00000000 0x00000000 0x42008c88 0x3fc9c000 0x00000216 0x00000000 0x00000001 0x4203d2d0
+09:30:38 X3  [09:30:38] 3fcccdb0: 0x3fcca714 0x00000000 0x00000000 0x00000000 0x00000085 0xafe93200 0x0084c7bb 0x2986a186
+09:30:38 X3  [09:30:38] 3fcccdd0: 0x32002895 0xc7bbafe9 0xa1860084 0x28952986 0x00240001 0x002a0000 0x00000101 0x00000000
+09:30:38 X3  [09:30:38] 3fcccdf0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fccce10: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fccce30: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fccce50: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fccce70: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fccce90: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fccceb0: 0x00000000 0x00000000 0x00000000 0x765b3b85 0x3fc9c000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fccced0: 0x3fc9c000 0x00000000 0x3fcc7b7a 0x42036b96 0x00000014 0x3fcc7b78 0x3fcca66c 0x00000000
+09:30:38 X3  [09:30:38] 3fcccef0: 0x3fc9c000 0x3fcca66c 0x3fcc7b78 0x42037214 0x3fc9c000 0x3fcca66c 0x3fc9c000 0x40382276
+09:30:38 X3  [09:30:38] 3fcccf10: 0x00000000 0x00000000 0x00000000 0x4200635e 0x00000000 0x00000000 0x00000000 0x4038df4c
+09:30:38 X3  [09:30:38] 3fcccf30: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:30:38 X3  [09:30:38] 3fcccf50: 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xbaad5678 0x0a129587 0xe35965cf
+09:30:38 X3  [09:30:38] 3fcccf70: 0x695c3f49 0x0c706300 0xaecf73f4 0xff679b6f 0x46e727d6 0x087c02da 0xe1d44ea7 0xd52e59e4
+09:30:38 X3  [09:30:38] 3fcccf90: 0x23f4a565 0x89e32661 0x5f1d76e4 0xed0e3bd0 0x270dc7a8 0x4e9f34d0 0x9b131180 0xa0ae9dc4
+09:30:38 X3  [09:30:38] 3fcccfb0: 0x2101a039 0x9875f402 0x88cb0bb1 0x12e2168b 0xfb8d8731 0xb3be2487 0x69b9f29c 0xd0597613
+09:30:38 X3  [09:30:38] ELF file SHA256: c8880b745
+09:30:38 X3  [09:30:38] Rebooting...
+09:30:38 X3  [09:30:38] ESP-ROM:esp32c3-api1-20210207
+09:30:38 X3  [09:30:38] Build:Feb  7 2021
+09:30:38 X3  [09:30:38] rst:0xc (RTC_SW_CPU_RST),boot:0xb (SPI_FAST_FLASH_BOOT)
+09:30:38 X3  [09:30:38] Saved PC:0x4038cb30
+09:30:38 X3  [09:30:38] SPIWP:0xee
+09:30:38 X3  [09:30:38] mode:DIO, clock div:1
+09:30:38 X3  [09:30:38] load:0x3fcd5820,len:0x1010
+09:30:38 X3  [09:30:38] load:0x403cbf10,len:0x9f4
+09:30:38 X3  [09:30:38] load:0x403ce710,len:0x2ea4
+09:30:38 X3  [09:30:38] entry 0x403cbf10
+09:30:38 X3  [09:30:38] === Xteink X3 stage 10: reader === boot #6, reset reason 4, wake cause 0
+09:30:38 X3  [09:30:38] previous wake timeline: rtc@setup=2180971 setup=18 serial=18 gauge+keys=24 display=193 sd@25M ok=240 find=293 index=305 page shown=2736 (RESYNC 2382 ms)
+09:30:38 X3  [09:30:38] last frame save at sleep: ok 162 ms
+09:30:39 X3  [09:30:39] books found: 10
+09:30:39 X3  [09:30:39]   /books/alice.txt
+09:30:39 X3  [09:30:39]   /books/frankenstein.txt
+09:30:39 X3  [09:30:39]   /books/lesson-01-identify-backup-probe.xtc
+09:30:39 X3  [09:30:39]   /books/lesson-02-epaper.xtc
+09:30:39 X3  [09:30:39]   /books/lesson-03-buttons.xtc
+09:30:39 X3  [09:30:39]   /books/lesson-04-reader.xtc
+09:30:39 X3  [09:30:39]   /books/lesson-05-power.xtc
+09:30:39 X3  [09:30:39]   /books/lesson-06-pc-pipeline-presenter.xtc
+09:30:39 X3  [09:30:39]   /books/pride-and-prejudice.txt
+09:30:39 X3  [09:30:39]   /books/talk-xteink3_deck.xtc
+09:30:39 X3  [09:30:39] /books/talk-xteink3_deck.xtc: XTC "Talk: xteink3_deck", 14 pages, 10 chapters
+09:30:41 X3  [09:30:41] [   2741] page 6/14  layout 48 ms + RESYNC 2383 ms   batt 99% -50 mA
+09:30:41 X3  [09:30:41] wake timeline: rtc@setup=2292956 setup=23 serial=24 gauge+keys=29 display=199 sd@25M ok=246 find=298 index=310 page shown=2742 (RESYNC 2383 ms)
+09:31:11 X3  [09:31:11] [  32799] idle: panel rails off
+09:31:47 X3  [09:31:47] [  68810] glitch ladder1: saw Left (raw 894) for 5 ms, now None (raw 4095)
+09:31:52 X3  [09:31:52] clicker on: heap 142172 -> 60032
+09:31:52 X3  [09:31:52] [  73610] clicker: laptop connected
+09:32:23 X3  [09:32:23] [ 104368] idle: panel rails off
+09:33:16 X3  [09:33:16] Guru Meditation Error: Core  0 panic'ed (Load access fault). Exception was unhandled.
+09:33:16 X3  [09:33:16] Core  0 register dump:
+09:33:16 X3  [09:33:16] MEPC    : 0x42004a32  RA      : 0x42008d3a  SP      : 0x3fcccbd0  GP      : 0x3fc96a00
+09:33:16 X3  [09:33:16] TP      : 0x3fcccf60  T0      : 0x4005890e  T1      : 0x0000000f  T2      : 0xffffffff
+09:33:16 X3  [09:33:16] S0/FP   : 0x3fcccc58  S1      : 0x3fccee3c  A0      : 0x00000000  A1      : 0x3fccd2a4
+09:33:16 X3  [09:33:16] A2      : 0x3fccd2a4  A3      : 0x00000015  A4      : 0x0000000e  A5      : 0x3fccee3c
+09:33:16 X3  [09:33:16] A6      : 0x00000000  A7      : 0x000000ff  S2      : 0x3fc9c000  S3      : 0x3fccee44
+09:33:16 X3  [09:33:16] S4      : 0x00000000  S5      : 0x00000002  S6      : 0x00000008  S7      : 0x3fc9c000
+09:33:16 X3  [09:33:16] S8      : 0x00000000  S9      : 0x00000000  S10     : 0x00000000  S11     : 0x00000000
+09:33:16 X3  [09:33:16] T3      : 0x00000014  T4      : 0x3fc9c000  T5      : 0x3fc9c000  T6      : 0x3fc9b01c
+09:33:16 X3  [09:33:16] MSTATUS : 0x00001881  MTVEC   : 0x40380001  MCAUSE  : 0x00000005  MTVAL   : 0x00000050
+09:33:16 X3  [09:33:16] MHARTID : 0x00000000
+09:33:16 X3  [09:33:16] Stack memory:
+09:33:16 X3  [09:33:16] 3fcccbd0: 0x3fce0000 0x00000000 0x00000000 0x00000000 0x00000004 0x00000000 0x3fcca714 0x4038d87c
+09:33:16 X3  [09:33:16] 3fcccbf0: 0x00000008 0x00000002 0x00000000 0x00000001 0x00000004 0x3fccd068 0x3fcca714 0x4038d308
+09:33:16 X3  [09:33:16] 3fcccc10: 0x0000000a 0x00000000 0x3fcc4e14 0x42046abe 0x3fc9c000 0x00000000 0x3fcccc58 0xad6474ea
+09:33:16 X3  [09:33:16] 3fcccc30: 0x00000000 0x00000002 0x00000000 0x00000001 0x00000004 0x00000000 0x00000004 0x4203e144
+09:33:16 X3  [09:33:16] 3fcccc50: 0x00000001 0x00000000 0x0000000e 0x00080001 0x00000402 0x00000000 0x00000000 0x00000000
+09:33:16 X3  [09:33:16] 3fcccc70: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:16 X3  [09:33:16] 3fcccc90: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:16 X3  [09:33:16] 3fccccb0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:16 X3  [09:33:16] 3fccccd0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:16 X3  [09:33:16] 3fccccf0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:17 X3  [09:33:17] 3fcccd10: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:17 X3  [09:33:17] 3fcccd30: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:17 X3  [09:33:17] 3fcccd50: 0x00000000 0x00000000 0x00000000 0xad6474ea 0x3fccf894 0x3fccd068 0x3fcca714 0x00000000
+09:33:17 X3  [09:33:17] 3fcccd70: 0x00000000 0x3fccd2a4 0x00000003 0x00000000 0x3fccf894 0x3fccf894 0x00000001 0x42041060
+09:33:17 X3  [09:33:17] 3fcccd90: 0x00000000 0x00000000 0x42008c88 0x3fc9c000 0x00000216 0x00000000 0x00000001 0x4203d2d0
+09:33:17 X3  [09:33:17] 3fcccdb0: 0x3fcca714 0x00000000 0x00000000 0x00000000 0x00000085 0xafe93200 0x0084c7bb 0x2986a186
+09:33:17 X3  [09:33:17] 3fcccdd0: 0x32002895 0xc7bbafe9 0xa1860084 0x28952986 0x00240001 0x002a0000 0x00000101 0x00000000
+09:33:17 X3  [09:33:17] 3fcccdf0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:17 X3  [09:33:17] 3fccce10: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:17 X3  [09:33:17] 3fccce30: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:17 X3  [09:33:17] 3fccce50: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:17 X3  [09:33:17] 3fccce70: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:17 X3  [09:33:17] 3fccce90: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:17 X3  [09:33:17] 3fccceb0: 0x00000000 0x00000000 0x00000000 0xad6474ea 0x3fc9c000 0x00000000 0x00000000 0x00000000
+09:33:17 X3  [09:33:17] 3fccced0: 0x3fc9c000 0x00000000 0x3fcc7b7a 0x42036b96 0x00000000 0x3fcc7b78 0x3fcca66c 0x00000000
+09:33:17 X3  [09:33:17] 3fcccef0: 0x3fc9c000 0x3fcca66c 0x3fcc7b78 0x42037214 0x3fc9c000 0x3fcca66c 0x3fc9c000 0x40382276
+09:33:17 X3  [09:33:17] 3fcccf10: 0x00000000 0x00000000 0x00000000 0x4200635e 0x00000000 0x00000000 0x00000000 0x4038df4c
+09:33:17 X3  [09:33:17] 3fcccf30: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:33:17 X3  [09:33:17] 3fcccf50: 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xbaad5678 0x0a129587 0xe35965cf
+09:33:17 X3  [09:33:17] 3fcccf70: 0x695c3f49 0x0c706300 0xaecf73f4 0xff679b6f 0x46e727d6 0x087c02da 0xe1d44ea7 0xd52e59e4
+09:33:17 X3  [09:33:17] 3fcccf90: 0x23f4a565 0x89e32661 0x5f1d76e4 0xed0e3bd0 0x270dc7a8 0x4e9f34d0 0x9b131180 0xa0ae9dc4
+09:33:17 X3  [09:33:17] 3fcccfb0: 0x2101a039 0x9875f402 0x88cb0bb1 0x12e2168b 0xfb8d8731 0xb3be2487 0x69b9f29c 0xd0597613
+09:33:17 X3  [09:33:17] ELF file SHA256: c8880b745
+09:33:17 X3  [09:33:17] Rebooting...
+09:33:17 X3  [09:33:17] ESP-ROM:esp32c3-api1-20210207
+09:33:17 X3  [09:33:17] Build:Feb  7 2021
+09:33:17 X3  [09:33:17] rst:0xc (RTC_SW_CPU_RST),boot:0xb (SPI_FAST_FLASH_BOOT)
+09:33:17 X3  [09:33:17] Saved PC:0x4038cb30
+09:33:17 X3  [09:33:17] SPIWP:0xee
+09:33:17 X3  [09:33:17] mode:DIO, clock div:1
+09:33:17 X3  [09:33:17] load:0x3fcd5820,len:0x1010
+09:33:17 X3  [09:33:17] load:0x403cbf10,len:0x9f4
+09:33:17 X3  [09:33:17] load:0x403ce710,len:0x2ea4
+09:33:17 X3  [09:33:17] entry 0x403cbf10
+09:33:17 X3  [09:33:17] === Xteink X3 stage 10: reader === boot #7, reset reason 4, wake cause 0
+09:33:17 X3  [09:33:17] previous wake timeline: rtc@setup=2292956 setup=23 serial=24 gauge+keys=29 display=199 sd@25M ok=246 find=298 index=310 page shown=2742 (RESYNC 2383 ms)
+09:33:17 X3  [09:33:17] last frame save at sleep: ok 162 ms
+09:33:17 X3  [09:33:17] books found: 10
+09:33:17 X3  [09:33:17]   /books/alice.txt
+09:33:17 X3  [09:33:17]   /books/frankenstein.txt
+09:33:17 X3  [09:33:17]   /books/lesson-01-identify-backup-probe.xtc
+09:33:17 X3  [09:33:17]   /books/lesson-02-epaper.xtc
+09:33:17 X3  [09:33:17]   /books/lesson-03-buttons.xtc
+09:33:17 X3  [09:33:17]   /books/lesson-04-reader.xtc
+09:33:17 X3  [09:33:17]   /books/lesson-05-power.xtc
+09:33:17 X3  [09:33:17]   /books/lesson-06-pc-pipeline-presenter.xtc
+09:33:17 X3  [09:33:17]   /books/pride-and-prejudice.txt
+09:33:17 X3  [09:33:17]   /books/talk-xteink3_deck.xtc
+09:33:17 X3  [09:33:17] /books/talk-xteink3_deck.xtc: XTC "Talk: xteink3_deck", 14 pages, 10 chapters
+09:33:20 X3  [09:33:20] [   2741] page 6/14  layout 48 ms + RESYNC 2383 ms   batt 99% -50 mA
+09:33:20 X3  [09:33:20] wake timeline: rtc@setup=2451475 setup=23 serial=24 gauge+keys=30 display=199 sd@25M ok=246 find=298 index=310 page shown=2742 (RESYNC 2383 ms)
+
+[exited with code 0]
+	Name: X3 Clicker
+	Connected: no
+09:36:55 LAPTOP  Connected: no
+09:36:55 X3  [09:36:55] -- port up --
+09:37:21 X3  [09:37:21] [  32798] idle: panel rails off
+09:37:28 X3  [09:37:28] clicker on: heap 142172 -> 60032
+09:37:28 X3  [09:37:28] [  40246] clicker: laptop connected
+09:37:30 LAPTOP  Connected: yes
+09:37:59 X3  [09:37:59] [  71210] idle: panel rails off
+09:38:27 X3  [09:38:27] [  99476] clicker: disconnect confirmed after 50 ms
+09:38:27 X3  [09:38:27] [  99529] clicker: 60 s without a key -> off
+09:38:29 LAPTOP  Connected: no
+09:38:46 X3  [09:38:46] btdm: bss start 0x3fcdf0a8, len 40
+09:38:46 X3  [09:38:46] btdm: data start 0x3fcdf09c, data start rom 0x400591fc, len 12
+09:38:46 X3  [09:38:46] MAGIC fadebead VERSION 0001000b
+09:38:46 X3  [09:38:46] MAGIC fadebead VERSION 00010001
+09:38:46 X3  [09:38:46] HLI Magic mismatch: 3fc973d0, fadebead
+09:38:46 X3  [09:38:46] Guru Meditation Error: Core  0 panic'ed (Instruction access fault). Exception was unhandled.
+09:38:46 X3  [09:38:46] Core  0 register dump:
+09:38:46 X3  [09:38:46] MEPC    : 0x00000000  RA      : 0x4205b0a6  SP      : 0x3fcb29c0  GP      : 0x3fc96a00
+09:38:46 X3  [09:38:46] TP      : 0x3fcb2bf0  T0      : 0x42056e7c  T1      : 0x0000000f  T2      : 0x01010001
+09:38:46 X3  [09:38:46] S0/FP   : 0x3fce0000  S1      : 0x3fce0000  A0      : 0x00000001  A1      : 0x0000011c
+09:38:46 X3  [09:38:46] A2      : 0x3fcbf168  A3      : 0x00000003  A4      : 0x00000000  A5      : 0x00000000
+09:38:46 X3  [09:38:46] A6      : 0x80000000  A7      : 0x00000010  S2      : 0x3fce0000  S3      : 0x3fce0000
+09:38:46 X3  [09:38:46] S4      : 0x3fce0000  S5      : 0x3fcdf96c  S6      : 0x00000000  S7      : 0x00000000
+09:38:46 X3  [09:38:46] S8      : 0x00000000  S9      : 0x00000000  S10     : 0x00000000  S11     : 0x00000000
+09:38:46 X3  [09:38:46] T3      : 0x00000000  T4      : 0x004b0005  T5      : 0x00000000  T6      : 0x01000001
+09:38:46 X3  [09:38:46] MSTATUS : 0x00001881  MTVEC   : 0x40380001  MCAUSE  : 0x00000001  MTVAL   : 0x00000000
+09:38:46 X3  [09:38:46] MHARTID : 0x00000000
+09:38:46 X3  [09:38:46] Stack memory:
+09:38:46 X3  [09:38:46] 3fcb29c0: 0x3fce0000 0x3fce0000 0x3fcdf96c 0x42056e86 0x00000001 0x00000808 0x000000fc 0x00000004
+09:38:46 X3  [09:38:46] 3fcb29e0: 0x00000000 0x00000000 0x00000000 0x3fcb2a04 0x00000808 0x000000fc 0x00000000 0x42060006
+09:38:46 X3  [09:38:46] 3fcb2a00: 0x00000001 0xfadebead 0x0001000b 0x00000000 0x00000000 0x00000000 0x00000000 0x3fc9c000
+09:38:46 X3  [09:38:46] 3fcb2a20: 0x00000001 0x3fcb2a78 0x00000001 0x4203271e 0x3fcb2aa4 0x00000000 0x00000086 0x40389532
+09:38:46 X3  [09:38:46] 3fcb2a40: 0x3fcb2aa4 0x00000003 0x00004000 0x40389532 0x400391e6 0x00000005 0x00000000 0x3fc9c000
+09:38:46 X3  [09:38:46] 3fcb2a60: 0x3fcb2b24 0x00000000 0x3fc9c000 0x42044dd6 0x00000000 0x00000000 0x5a5aa5a5 0x02509280
+09:38:46 X3  [09:38:46] 3fcb2a80: 0x00171000 0x00000601 0x001e0000 0x01000000 0x00000000 0x000b0000 0x00000001 0x00640001
+09:38:46 X3  [09:38:46] 3fcb2aa0: 0x00000064 0x01010000 0x004b0005 0x00000000 0x01000001 0x01000001 0x01010001 0x00000100
+09:38:46 X3  [09:38:46] 3fcb2ac0: 0x400391e6 0x00000000 0x3fc9c000 0x420066bc 0x3c093380 0x0000000a 0x3fcb2b24 0x42015f5a
+09:38:46 X3  [09:38:46] 3fcb2ae0: 0x3fcb2b54 0x00000000 0x3fcb2b24 0x3fc9c000 0x3fc9c000 0x3fc9c000 0x3fc9c000 0x4200d886
+09:38:46 X3  [09:38:46] 3fcb2b00: 0x00000000 0x00000000 0x000000aa 0x42019900 0x00000001 0x00000001 0x00000000 0x4200e59a
+09:38:46 X3  [09:38:46] 3fcb2b20: 0x3fc994b8 0x43203358 0x6b63696c 0x00007265 0x8a000fff 0x0001cdc8 0x00000002 0xd022f3f6
+09:38:46 X3  [09:38:46] 3fcb2b40: 0x3fc9c000 0x4201f000 0x00000000 0x00000000 0x3fc9c000 0x3fc9a000 0x3fc9c000 0x42012086
+09:38:46 X3  [09:38:46] 3fcb2b60: 0x00000fff 0x0001cdc8 0x00000202 0x0002135c 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2b80: 0x00000000 0x3fc99000 0x3fc9a000 0x420122b0 0x00000000 0x00000000 0x00000001 0x4201e63c
+09:38:46 X3  [09:38:46] 3fcb2ba0: 0x00000000 0x4201f000 0x3fc9c000 0x4201e6dc 0x00000000 0x00000000 0x00000000 0x4038df4c
+09:38:46 X3  [09:38:46] 3fcb2bc0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2be0: 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xbaad5678 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2c00: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2c20: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2c40: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2c60: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2c80: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2ca0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2cc0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2ce0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2d00: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2d20: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2d40: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2d60: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2d80: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] 3fcb2da0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:38:46 X3  [09:38:46] ELF file SHA256: c3c6cb27a
+09:38:46 X3  [09:38:46] Rebooting...
+09:38:46 X3  [09:38:46] ESP-ROM:esp32c3-api1-20210207
+09:38:46 X3  [09:38:46] Build:Feb  7 2021
+09:38:46 X3  [09:38:46] rst:0xc (RTC_SW_CPU_RST),boot:0xb (SPI_FAST_FLASH_BOOT)
+09:38:46 X3  [09:38:46] Saved PC:0x4038cb30
+09:38:47 X3  [09:38:46] SPIWP:0xee
+09:38:47 X3  [09:38:46] mode:DIO, clock div:1
+09:38:47 X3  [09:38:46] load:0x3fcd5820,len:0x1010
+09:38:47 X3  [09:38:46] load:0x403cbf10,len:0x9f4
+09:38:47 X3  [09:38:46] load:0x403ce710,len:0x2ea4
+09:38:47 X3  [09:38:46] entry 0x403cbf10
+09:38:47 X3  [09:38:47] === Xteink X3 stage 10: reader === boot #9, reset reason 4, wake cause 0
+09:38:47 X3  [09:38:47] previous wake timeline: rtc@setup=2662399 setup=23 serial=24 gauge+keys=30 display=199 sd@25M ok=246 find=298 index=310 page shown=2741 (RESYNC 2382 ms)
+09:38:47 X3  [09:38:47] last frame save at sleep: ok 162 ms
+09:38:47 X3  [09:38:47] books found: 10
+09:38:47 X3  [09:38:47]   /books/alice.txt
+09:38:47 X3  [09:38:47]   /books/frankenstein.txt
+09:38:47 X3  [09:38:47]   /books/lesson-01-identify-backup-probe.xtc
+09:38:47 X3  [09:38:47]   /books/lesson-02-epaper.xtc
+09:38:47 X3  [09:38:47]   /books/lesson-03-buttons.xtc
+09:38:47 X3  [09:38:47]   /books/lesson-04-reader.xtc
+09:38:47 X3  [09:38:47]   /books/lesson-05-power.xtc
+09:38:47 X3  [09:38:47]   /books/lesson-06-pc-pipeline-presenter.xtc
+09:38:47 X3  [09:38:47] /books/talk-xteink3_deck.xtc: XTC "Talk: xteink3_deck", 14 pages, 10 chapters
+09:38:49 X3  [09:38:49] [   2739] page 6/14  layout 48 ms + RESYNC 2383 ms   batt 98% -30 mA
+09:38:49 X3  [09:38:49] wake timeline: rtc@setup=2781143 setup=22 serial=22 gauge+keys=28 display=198 sd@25M ok=245 find=296 index=308 page shown=2740 (RESYNC 2383 ms)
+09:38:55 X3  [09:38:55] clicker on: heap 142172 -> 60032
+09:38:55 X3  [09:38:55] [   8569] clicker: laptop connected
+09:38:57 LAPTOP  Connected: yes
+09:39:26 X3  [09:39:26] [  39465] idle: panel rails off
+09:40:23 X3  [09:40:23] [  95972] clicker: disconnect confirmed after 20 ms
+09:40:23 X3  [09:40:23] [  96025] clicker: 60 s without a key -> off
+09:40:24 LAPTOP  Connected: no
+09:40:28 X3  [09:40:28] btdm: bss start 0x3fcdf0a8, len 40
+09:40:28 X3  [09:40:28] btdm: data start 0x3fcdf09c, data start rom 0x400591fc, len 12
+09:40:28 X3  [09:40:28] MAGIC fadebead VERSION 0001000b
+09:40:28 X3  [09:40:28] MAGIC fadebead VERSION 00010001
+09:40:28 X3  [09:40:28] HLI Magic mismatch: 3fc973d0, fadebead
+09:40:28 X3  [09:40:28] Guru Meditation Error: Core  0 panic'ed (Instruction access fault). Exception was unhandled.
+09:40:28 X3  [09:40:28] Core  0 register dump:
+09:40:28 X3  [09:40:28] MEPC    : 0x00000000  RA      : 0x4205b0a6  SP      : 0x3fcb29c0  GP      : 0x3fc96a00
+09:40:28 X3  [09:40:28] TP      : 0x3fcb2bf0  T0      : 0x42056e7c  T1      : 0x0000000f  T2      : 0x01010001
+09:40:28 X3  [09:40:28] S0/FP   : 0x3fce0000  S1      : 0x3fce0000  A0      : 0x00000001  A1      : 0x0000011c
+09:40:28 X3  [09:40:28] A2      : 0x3fcbf168  A3      : 0x00000003  A4      : 0x00000000  A5      : 0x00000000
+09:40:28 X3  [09:40:28] A6      : 0x80000000  A7      : 0x00000010  S2      : 0x3fce0000  S3      : 0x3fce0000
+09:40:28 X3  [09:40:28] S4      : 0x3fce0000  S5      : 0x3fcdf96c  S6      : 0x00000000  S7      : 0x00000000
+09:40:28 X3  [09:40:28] S8      : 0x00000000  S9      : 0x00000000  S10     : 0x00000000  S11     : 0x00000000
+09:40:28 X3  [09:40:28] T3      : 0x00000000  T4      : 0x004b0005  T5      : 0x00000000  T6      : 0x01000001
+09:40:28 X3  [09:40:28] MSTATUS : 0x00001881  MTVEC   : 0x40380001  MCAUSE  : 0x00000001  MTVAL   : 0x00000000
+09:40:28 X3  [09:40:28] MHARTID : 0x00000000
+09:40:28 X3  [09:40:28] Stack memory:
+09:40:28 X3  [09:40:28] 3fcb29c0: 0x3fce0000 0x3fce0000 0x3fcdf96c 0x42056e86 0x00000001 0x00000808 0x000000fc 0x00000004
+09:40:28 X3  [09:40:28] 3fcb29e0: 0x00000000 0x00000000 0x00000000 0x3fcb2a04 0x00000808 0x000000fc 0x00000000 0x42060006
+09:40:28 X3  [09:40:28] 3fcb2a00: 0x00000001 0xfadebead 0x0001000b 0x00000000 0x00000000 0x00000000 0x00000000 0x3fc9c000
+09:40:28 X3  [09:40:28] 3fcb2a20: 0x00000001 0x3fcb2a78 0x00000001 0x4203271e 0x3fcb2aa4 0x00000000 0x00000086 0x40389532
+09:40:28 X3  [09:40:28] 3fcb2a40: 0x3fcb2aa4 0x00000003 0x00040000 0x40389532 0x400391e6 0x00000006 0x00000000 0x3fc9c000
+09:40:28 X3  [09:40:28] 3fcb2a60: 0x3fcb2b24 0x00000000 0x3fc9c000 0x42044dd6 0x00000000 0x00000000 0x5a5aa5a5 0x02509280
+09:40:28 X3  [09:40:28] 3fcb2a80: 0x00171000 0x00000601 0x001e0000 0x01000000 0x00000000 0x000b0000 0x00000001 0x00640001
+09:40:28 X3  [09:40:28] 3fcb2aa0: 0x00000064 0x01010000 0x004b0005 0x00000000 0x01000001 0x01000001 0x01010001 0x00000100
+09:40:28 X3  [09:40:28] 3fcb2ac0: 0x400391e6 0x00000000 0x3fc9c000 0x420066bc 0x3c093380 0x0000000a 0x3fcb2b24 0x42015f5a
+09:40:28 X3  [09:40:28] 3fcb2ae0: 0x3fcb2b54 0x00000000 0x3fcb2b24 0x3fc9c000 0x3fc9c000 0x3fc9c000 0x3fc9c000 0x4200d886
+09:40:28 X3  [09:40:28] 3fcb2b00: 0x00000000 0x00000000 0x000000c3 0x42019900 0x00000001 0x00000001 0x00000000 0x4200e59a
+09:40:28 X3  [09:40:28] 3fcb2b20: 0x3fc994b8 0x43203358 0x6b63696c 0x00007265 0x8a000fff 0x00018c32 0x00000002 0xfed40c0f
+09:40:28 X3  [09:40:28] 3fcb2b40: 0x3fc9c000 0x4201f000 0x00000000 0x00000000 0x3fc9c000 0x3fc9a000 0x3fc9c000 0x42012086
+09:40:28 X3  [09:40:28] 3fcb2b60: 0x00000fff 0x00018c32 0x00000202 0x0002135c 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2b80: 0x00000000 0x3fc99000 0x3fc9a000 0x420122b0 0x00000000 0x00000000 0x00000001 0x4201e63c
+09:40:28 X3  [09:40:28] 3fcb2ba0: 0x00000000 0x4201f000 0x3fc9c000 0x4201e6dc 0x00000000 0x00000000 0x00000000 0x4038df4c
+09:40:28 X3  [09:40:28] 3fcb2bc0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2be0: 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xbaad5678 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2c00: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2c20: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2c40: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2c60: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2c80: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2ca0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2cc0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2ce0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2d00: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2d20: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2d40: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2d60: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:28 X3  [09:40:28] 3fcb2d80: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:29 X3  [09:40:29] 3fcb2da0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+09:40:29 X3  [09:40:29] ELF file SHA256: c3c6cb27a
+09:40:29 X3  [09:40:29] Rebooting...
+09:40:29 X3  [09:40:29] ESP-ROM:esp32c3-api1-20210207
+09:40:29 X3  [09:40:29] Build:Feb  7 2021
+09:40:29 X3  [09:40:29] rst:0xc (RTC_SW_CPU_RST),boot:0xb (SPI_FAST_FLASH_BOOT)
+09:40:29 X3  [09:40:29] Saved PC:0x4038cb30
+09:40:29 X3  [09:40:29] SPIWP:0xee
+09:40:29 X3  [09:40:29] mode:DIO, clock div:1
+09:40:29 X3  [09:40:29] load:0x3fcd5820,len:0x1010
+09:40:29 X3  [09:40:29] load:0x403cbf10,len:0x9f4
+09:40:29 X3  [09:40:29] load:0x403ce710,len:0x2ea4
+09:40:29 X3  [09:40:29] entry 0x403cbf10
+09:40:29 X3  [09:40:29] === Xteink X3 stage 10: reader === boot #10, reset reason 4, wake cause 0
+09:40:29 X3  [09:40:29] previous wake timeline: rtc@setup=2781143 setup=22 serial=22 gauge+keys=28 display=198 sd@25M ok=245 find=296 index=308 page shown=2740 (RESYNC 2383 ms)
+09:40:29 X3  [09:40:29] last frame save at sleep: ok 162 ms
+09:40:29 X3  [09:40:29] books found: 10
+09:40:29 X3  [09:40:29]   /books/alice.txt
+09:40:29 X3  [09:40:29]   /books/frankenstein.txt
+09:40:29 X3  [09:40:29]   /books/lesson-01-identify-backup-probe.xtc
+09:40:29 X3  [09:40:29]   /books/lesson-02-epaper.xtc
+09:40:29 X3  [09:40:29]   /books/lesson-03-buttons.xtc
+09:40:29 X3  [09:40:29]   /books/lesson-04-reader.xtc
+09:40:29 X3  [09:40:29]   /books/lesson-05-power.xtc
+09:40:29 X3  [09:40:29]   /books/lesson-06-pc-pipeline-presenter.xtc
+09:40:29 X3  [09:40:29] /books/talk-xteink3_deck.xtc: XTC "Talk: xteink3_deck", 14 pages, 10 chapters
+09:40:31 X3  [09:40:31] [   2739] page 6/14  layout 48 ms + RESYNC 2383 ms   batt 98% -31 mA
+09:40:31 X3  [09:40:31] wake timeline: rtc@setup=2882885 setup=22 serial=22 gauge+keys=28 display=198 sd@25M ok=245 find=296 index=308 page shown=2740 (RESYNC 2383 ms)
+09:41:24 X3  [09:41:24] [  55711] idle: panel rails off
+
+[exited with code 0]
+09:46:00 LAPTOP  Connected: no
+09:46:00 X3  [09:46:00] -- port up --
+09:46:25 X3  [09:46:25] [  32796] idle: panel rails off
+09:50:31 X3  [09:50:31]  (raw 4095)
+09:50:34 X3  [09:50:34] clicker on: heap 142172 -> 60032
+09:50:34 X3  [09:50:34] [ 281955] clicker: laptop connected
+09:50:35 LAPTOP  Connected: yes
+09:51:05 X3  [09:51:05] [ 312867] idle: panel rails off
+09:51:33 X3  [09:51:33] [ 341591] clicker: disconnect confirmed after 10 ms
+09:51:34 X3  [09:51:34] [ 341644] clicker: heap after off 128556
+09:51:34 X3  [09:51:34] [ 341644] clicker: 60 s without a key -> off
+09:51:34 LAPTOP  Connected: no
+09:51:48 X3  [09:51:48] clicker on: heap 134308 -> 52388
+09:51:48 X3  [09:51:48] [ 356300] clicker: laptop connected
+09:51:48 LAPTOP  Connected: yes
+09:52:19 X3  [09:52:19] [ 387147] idle: panel rails off
+09:53:25 X3  [09:53:25] [ 453151] clicker: disconnect confirmed after 20 ms
+09:53:25 X3  [09:53:25] [ 453204] clicker: heap after off 120948
+09:53:25 X3  [09:53:25] [ 453204] clicker: 60 s without a key -> off
+09:53:26 LAPTOP  Connected: no
+09:54:20 X3  [09:54:20] [ 507958] clicker: laptop connected
+09:54:21 LAPTOP  Connected: yes
+09:54:25 X3  [09:54:25] [ 513547] clicker: disconnect confirmed after 40 ms
+09:54:25 X3  [09:54:25] clicker off: heap 113344
+09:54:27 LAPTOP  Connected: no
+09:54:30 X3  [09:54:30] clicker on: heap 119096 -> 37156
+09:54:30 X3  [09:54:30] [ 517859] clicker: laptop connected
+09:54:31 LAPTOP  Connected: yes
+09:55:01 X3  [09:55:01] [ 548747] idle: panel rails off
+09:55:20 X3  [09:55:20] [ 568267] clicker: disconnect confirmed after 40 ms
+09:55:20 X3  [09:55:20] clicker off: heap 105740
+09:55:21 LAPTOP  Connected: no
+09:55:52 X3  [09:55:52] [ 599741] idle: panel rails off
+09:58:28 LAPTOP  Connected: yes
+09:58:32 LAPTOP  Connected: no
+09:58:34 LAPTOP  Connected: yes
+09:58:38 LAPTOP  Connected: no
+09:58:42 LAPTOP  Connected: yes
+09:59:43 LAPTOP  Connected: no
+
+[exited with code 0]
+09:56:17 LAPTOP  Connected: no
+09:56:17 X3  [09:56:17] -- port up --
+09:56:17 X3  [09:56:17] erial=22 gauge+keys=28 display=197 sd@25M ok=245 find=296 index=307 page shown=2740 (RESYNC 2383 ms)
+09:56:17 X3  [09:56:17] books found: 10
+09:56:17 X3  [09:56:17]   /books/alice.txt
+09:56:17 X3  [09:56:17]   /books/frankenstein.txt
+09:56:17 X3  [09:56:17]   /books/lesson-01-identify-backup-probe.xtc
+09:56:17 X3  [09:56:17]   /books/lesson-02-epaper.xtc
+09:56:17 X3  [09:56:17]   /books/lesson-03-buttons.xtc
+09:56:17 X3  [09:56:17]   /books/lesson-04-reader.xtc
+09:56:17 X3  [09:56:17]   /books/lesson-05-power.xtc
+09:56:17 X3  [09:56:17]   /books/lesson-06-pc-pipeline-presenter.xtc
+09:56:17 X3  [09:56:17]   /books/pride-and-prejudice.txt
+09:56:17 X3  [09:56:17]   /books/talk-xteink3_deck.xtc
+09:56:17 X3  [09:56:17] /books/talk-xteink3_deck.xtc: XTC "Talk: xteink3_deck", 14 pages, 10 chapters
+09:56:20 X3  [09:56:20] [   2739] page 6/14  layout 48 ms + RESYNC 2383 ms   batt 96% -26 mA
+09:56:20 X3  [09:56:20] wake timeline: rtc@setup=3830421 setup=22 serial=22 gauge+keys=28 display=198 sd@25M ok=245 find=296 index=308 page shown=2739 (RESYNC 2383 ms)
+09:56:50 X3  [09:56:50] [  32796] idle: panel rails off
+09:58:27 X3  [09:58:27] clicker on: heap 142188 -> 60048
+09:58:27 X3  [09:58:27] [ 129756] clicker: laptop connected
+09:58:27 LAPTOP  Connected: yes
+09:58:30 X3  [09:58:30] [ 132777] clicker: disconnect confirmed after 20 ms
+09:58:30 X3  [09:58:30] clicker off: heap 59924
+09:58:31 LAPTOP  Connected: no
+09:58:33 X3  [09:58:33] clicker on: heap 59924 -> 59924
+09:58:34 X3  [09:58:34] [ 136551] clicker: laptop connected
+09:58:35 LAPTOP  Connected: yes
+09:58:37 X3  [09:58:37] [ 140068] clicker: disconnect confirmed after 40 ms
+09:58:37 X3  [09:58:37] clicker off: heap 59924
+09:58:39 LAPTOP  Connected: no
+09:58:41 X3  [09:58:41] clicker on: heap 59924 -> 59924
+09:58:41 X3  [09:58:41] [ 143797] clicker: laptop connected
+09:58:41 LAPTOP  Connected: yes
+09:59:14 X3  [09:59:14] [ 176509] idle: panel rails off
+09:59:41 X3  [09:59:41] [ 203705] clicker: disconnect confirmed after 20 ms
+09:59:41 X3  [09:59:41] [ 203706] clicker: heap after off 59924
+09:59:41 X3  [09:59:41] [ 203706] clicker: 60 s without a key -> off
+09:59:42 LAPTOP  Connected: no
+10:00:12 X3  [10:00:12] [ 234644] idle: panel rails off
+10:01:23 X3  [10:01:23] -- port gone (asleep) --
+10:05:58 X3  [10:05:58] -- port up --
+10:08:27 LAPTOP  Connected: yes
+10:08:37 LAPTOP  Connected: no
+10:09:01 LAPTOP  Connected: yes
+10:10:02 LAPTOP  Connected: no
+
+[exited with code 0]
+10:07:06 LAPTOP  Connected: no
+10:07:06 X3  [10:07:06] -- port up --
+10:07:06 X3  [10:07:06] books found: 10
+10:07:06 X3  [10:07:06]   /books/alice.txt
+10:07:06 X3  [10:07:06]   /books/frankenstein.txt
+10:07:06 X3  [10:07:06]   /books/lesson-01-identify-backup-probe.xtc
+10:07:06 X3  [10:07:06]   /books/lesson-02-epaper.xtc
+10:07:06 X3  [10:07:06]   /books/lesson-03-buttons.xtc
+10:07:06 X3  [10:07:06]   /books/lesson-04-reader.xtc
+10:07:06 X3  [10:07:06]   /books/lesson-05-power.xtc
+10:07:06 X3  [10:07:06]   /books/lesson-06-pc-pipeline-presenter.xtc
+10:07:06 X3  [10:07:06]   /books/pride-and-prejudice.txt
+10:07:06 X3  [10:07:06]   /books/talk-xteink3_deck.xtc
+10:07:06 X3  [10:07:06] /books/talk-xteink3_deck.xtc: XTC "Talk: xteink3_deck", 14 pages, 10 chapters
+10:07:08 X3  [10:07:08] [   2739] page 6/14  layout 49 ms + RESYNC 2382 ms   batt 96% 138 mA
+10:07:08 X3  [10:07:08] wake timeline: rtc@setup=4478466 setup=22 serial=22 gauge+keys=28 display=197 sd@25M ok=245 find=297 index=308 page shown=2739 (RESYNC 2382 ms)
+10:07:38 X3  [10:07:38] [  32796] idle: panel rails off
+10:08:27 X3  [10:08:27] [  81240] clicker: laptop connected
+10:08:27 LAPTOP  Connected: yes
+10:08:36 X3  [10:08:36] [  90384] clicker: disconnect confirmed after 19 ms
+10:08:36 X3  [10:08:36] [  90385] clicker off (menu) -> restarting to free the BLE stack
+10:08:36 X3  [10:08:36] ESP-ROM:esp32c3-api1-20210207
+10:08:36 X3  [10:08:36] Build:Feb  7 2021
+10:08:36 X3  [10:08:36] rst:0xc (RTC_SW_CPU_RST),boot:0xb (SPI_FAST_FLASH_BOOT)
+10:08:36 X3  [10:08:36] Saved PC:0x4038cb30
+10:08:36 X3  [10:08:36] SPIWP:0xee
+10:08:36 X3  [10:08:36] mode:DIO, clock div:1
+10:08:36 X3  [10:08:36] load:0x3fcd5820,len:0x1010
+10:08:36 X3  [10:08:36] load:0x403cbf10,len:0x9f4
+10:08:36 X3  [10:08:36] load:0x403ce710,len:0x2ea4
+10:08:36 X3  [10:08:36] entry 0x403cbf10
+10:08:36 X3  [10:08:36] === Xteink X3 stage 10: reader === boot #14, reset reason 3, wake cause 0
+10:08:36 X3  [10:08:36] previous wake timeline: rtc@setup=4478466 setup=22 serial=22 gauge+keys=28 display=197 sd@25M ok=245 find=297 index=308 page shown=2739 (RESYNC 2382 ms)
+10:08:36 X3  [10:08:36] last frame save at sleep: ok 162 ms
+10:08:37 X3  [10:08:37] books found: 10
+10:08:37 X3  [10:08:37]   /books/alice.txt
+10:08:37 X3  [10:08:37]   /books/frankenstein.txt
+10:08:37 X3  [10:08:37]   /books/lesson-01-identify-backup-probe.xtc
+10:08:37 X3  [10:08:37]   /books/lesson-02-epaper.xtc
+10:08:37 X3  [10:08:37]   /books/lesson-03-buttons.xtc
+10:08:37 X3  [10:08:37]   /books/lesson-04-reader.xtc
+10:08:37 X3  [10:08:37]   /books/lesson-05-power.xtc
+10:08:37 X3  [10:08:37]   /books/lesson-06-pc-pipeline-presenter.xtc
+10:08:37 X3  [10:08:37]   /books/pride-and-prejudice.txt
+10:08:37 X3  [10:08:37]   /books/talk-xteink3_deck.xtc
+10:08:37 X3  [10:08:37] /books/talk-xteink3_deck.xtc: XTC "Talk: xteink3_deck", 14 pages, 10 chapters
+10:08:37 LAPTOP  Connected: no
+10:08:37 X3  [10:08:37] wake timeline: rtc@setup=4569351 setup=22 serial=25 gauge+keys=31 display=200 frame started=383 sd@25M ok=431 find=483 index=495 page shown=1082 (saved frame, HALF 870 ms)
+10:08:51 X3  [10:08:51] [  15063] glitch ladder1: saw Back (raw 3113) for 5 ms, now None (raw 4095)
+10:09:01 X3  [10:09:01] clicker on: heap 142232 -> 60064
+10:09:01 X3  [10:09:01] [  24843] clicker: laptop connected
+10:09:01 LAPTOP  Connected: yes
+10:09:32 X3  [10:09:32] [  55861] idle: panel rails off
+10:10:00 X3  [10:10:00] [  84077] clicker: 60 s without a key
+10:10:00 X3  [10:10:00] [  84117] clicker: disconnect confirmed after 39 ms
+10:10:00 X3  [10:10:00] [  84118] clicker off (idle time-out) -> restarting to free the BLE stack
+10:10:01 X3  [10:10:01] ESP-ROM:esp32c3-api1-20210207
+10:10:01 X3  [10:10:01] Build:Feb  7 2021
+10:10:01 X3  [10:10:01] rst:0xc (RTC_SW_CPU_RST),boot:0xb (SPI_FAST_FLASH_BOOT)
+10:10:01 X3  [10:10:01] Saved PC:0x4038cb30
+10:10:01 X3  [10:10:01] SPIWP:0xee
+10:10:01 X3  [10:10:01] mode:DIO, clock div:1
+10:10:01 X3  [10:10:01] load:0x3fcd5820,len:0x1010
+10:10:01 X3  [10:10:01] load:0x403cbf10,len:0x9f4
+10:10:01 X3  [10:10:01] load:0x403ce710,len:0x2ea4
+10:10:01 X3  [10:10:01] entry 0x403cbf10
+10:10:01 X3  [10:10:01] === Xteink X3 stage 10: reader === boot #15, reset reason 3, wake cause 0
+10:10:01 X3  [10:10:01] previous wake timeline: rtc@setup=4569351 setup=22 serial=25 gauge+keys=31 display=200 frame started=383 sd@25M ok=431 find=483 index=495 page shown=1082 (saved frame, HALF 870 ms)
+10:10:01 X3  [10:10:01] last frame save at sleep: ok 162 ms
+10:10:01 X3  [10:10:01] books found: 10
+10:10:01 X3  [10:10:01]   /books/alice.txt
+10:10:01 X3  [10:10:01]   /books/frankenstein.txt
+10:10:01 X3  [10:10:01]   /books/lesson-01-identify-backup-probe.xtc
+10:10:01 X3  [10:10:01]   /books/lesson-02-epaper.xtc
+10:10:01 X3  [10:10:01]   /books/lesson-03-buttons.xtc
+10:10:01 X3  [10:10:01]   /books/lesson-04-reader.xtc
+10:10:01 X3  [10:10:01]   /books/lesson-05-power.xtc
+10:10:01 X3  [10:10:01]   /books/lesson-06-pc-pipeline-presenter.xtc
+10:10:01 X3  [10:10:01] /books/talk-xteink3_deck.xtc: XTC "Talk: xteink3_deck", 14 pages, 10 chapters
+10:10:02 X3  [10:10:02] wake timeline: rtc@setup=4653880 setup=22 serial=25 gauge+keys=31 display=200 frame started=383 sd@25M ok=431 find=483 index=495 page shown=1082 (saved frame, HALF 870 ms)
+10:10:02 LAPTOP  Connected: no
+10:10:32 X3  [10:10:32] [  31138] idle: panel rails off
+10:11:15 X3  [10:11:15] -- port gone (asleep) --
+
+[exited with code 0]

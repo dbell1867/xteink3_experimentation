@@ -6,7 +6,8 @@
 - **Presenting:** X3 menu -> "Clicker: off" -> Confirm (radio on; laptop reconnects by itself once paired as
   "X3 Clicker"). Open talk-<deck>.xtc. Lower key = Page Down to the laptop, then the notes page; upper = Page Up;
   tap Confirm = resync laptop to the X3 (Home + n x Page Down); Contents jump resyncs too.
-  Clicker turns itself off after 30 min without a key (built, NOT yet tested). Uses ~45 mA connected / 49 advertising (gauge, on battery).
+  Turning the clicker off (menu, or 30 min without a key) RESTARTS the X3 (~1.1 s back to the page via the
+  saved-frame path) to drop the BLE stack. Tested with a 60 s build: no crash, no leak, laptop disconnects. Uses ~45 mA connected / 49 advertising (gauge, on battery).
 - **Talk workflow:** marimo speaker notes -> tools/notes2xtc.py -> tools/x3sync.py.
 - **Lesson workflow:** edit docs/lesson-*.md -> `.venv/bin/python tools/x3sync.py` (X3 awake + plugged in).
 - **Next (pick):** parked long-press redesign; skill update (G35 BLE HID data point, G34 HID notes);
@@ -64,6 +65,16 @@
     not starting aligned; resync fixes. Menu status was stale (no redraw on state change) -> auto-redraw + logs.
     Power: predicted 29-30 mA, measured 45 connected / 49 advertising (on battery; the USB reading was the charger,
     G50). Hypothesis "short HID connection interval" FALSIFIED (advertising costs as much): radio-on ~+25 mA.
+22. Stage 15b auto-off test (60 s test build, -DTEST_CLICKER_IDLE_MS=60000): found 3 bugs.
+    (1) stop() = deinit(true) while connected -> crash (teardown events hit freed characteristics) -> disconnect,
+    wait, stop advertising, then deinit. (2) deinit(true) releases controller memory for good -> next start crashed
+    in esp_bt_controller_init. (3) deinit(false) leaks ~7.6 KB/cycle (BLEServer has no destructor). Fix: build once;
+    off = disconnect + stop advertising + esp_restart() with a softRestart flag -> saved-frame fast wake (1.08 s).
+    Bench then showed 18.6 mA in light sleep - blamed on BLE WITHOUT a control; a control run with Alice open read
+    2.0, with the talk .xtc open 18.6: XtcBook kept the file open after a 52 KB multi-block read -> SD card stayed
+    active ~17 mA. Fix: open/read/close per page (as CrossPoint does) -> 2.0 mA with the talk open.
+    The restart decision rested on the confounded 19 mA; kept anyway (robust, returns 82 KB). "Build once, no
+    restart" idle power is UNMEASURED.
 
 ## Decisions
 - C++ / Arduino core 3.x via pioarduino — stock fw is also Arduino-ESP32, CrossPoint proves the platform on this device.

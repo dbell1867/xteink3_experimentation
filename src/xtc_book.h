@@ -20,7 +20,7 @@ class XtcBook {
 
   // Opens and validates the header. On failure, error() says why.
   bool open(fs::FS& fs, const char* path);
-  void close() { file.close(); }
+  void close() {}  // nothing to do: the file is only open while a page is read
 
   int pageCount() const { return pages; }
   const String& title() const { return bookTitle; }
@@ -37,6 +37,11 @@ class XtcBook {
   static int peekPageCount(fs::FS& fs, const char* path);
 
  private:
+  // The file is opened per read and closed again (as CrossPoint's XtcParser does).
+  // Keeping it open after a 52 KB multi-block page read left the X3 drawing
+  // ~18.6 mA in light sleep instead of 2.0 (bench, stage 15).
+  fs::FS* fsys = nullptr;
+  String path;
   File file;
   int pages = 0;
   uint64_t tableOffset = 0;

@@ -17,8 +17,8 @@ constexpr uint8_t KEY_NEXT = 0x4E;   // Page Down
 constexpr uint8_t KEY_PREV = 0x4B;   // Page Up
 constexpr uint8_t KEY_FIRST = 0x4A;  // Home -> reveal.js first slide
 
-void start(const char* name);  // radio on, advertise
-void stop();                   // radio off (frees the BLE stack's memory)
+void start(const char* name);  // first call builds the BLE stack (~82 KB heap, kept until reboot); advertise
+void stop();                   // disconnect + stop advertising: nothing transmitted, nothing can connect
 State state();
 const char* stateName();
 

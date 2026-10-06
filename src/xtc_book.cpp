@@ -20,8 +20,10 @@ int XtcBook::peekPageCount(fs::FS& fs, const char* path) {
   return ok ? u16(h + 6) : 0;
 }
 
-bool XtcBook::open(fs::FS& fs, const char* path) {
-  file = fs.open(path);
+bool XtcBook::open(fs::FS& fs, const char* p) {
+  fsys = &fs;
+  path = p;
+  file = fs.open(p);
   pages = 0;
   chapterList.clear();
   if (!file) {
@@ -67,6 +69,7 @@ bool XtcBook::open(fs::FS& fs, const char* path) {
       if (start >= 1 && start <= pages) chapterList.push_back({start - 1, utf8ToCp1252(name)});
     }
   }
+  file.close();  // reopened per page in readPage()
   err = "";
   return true;
 }
@@ -79,21 +82,31 @@ int XtcBook::chapterForPage(int page) const {
 }
 
 bool XtcBook::readPage(int n, uint8_t* fb, size_t len, uint16_t width, uint16_t height) {
-  if (n < 0 || n >= pages) return false;
+  if (n < 0 || n >= pages || !fsys) return false;
+  file = fsys->open(path);
+  if (!file) {
+    err = "cannot reopen file";
+    return false;
+  }
   uint8_t e[16];
   if (!file.seek(tableOffset + 16ull * n) || file.read(e, 16) != 16) {
     err = "page table read failed";
+    file.close();
     return false;
   }
   const uint64_t off = u64(e);
   uint8_t ph[22];
   if (!file.seek(off) || file.read(ph, 22) != 22) {
     err = "page read failed";
+    file.close();
     return false;
   }
   if (u32(ph) != XTG_MAGIC || u16(ph + 4) != width || u16(ph + 6) != height || ph[9] != 0 || u32(ph + 10) != len) {
     err = "page is not 792x528 1-bit uncompressed";
+    file.close();
     return false;
   }
-  return file.read(fb, len) == len;  // straight into the frame buffer
+  const bool ok = file.read(fb, len) == len;  // straight into the frame buffer
+  file.close();
+  return ok;
 }

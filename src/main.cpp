@@ -78,7 +78,11 @@ constexpr uint32_t STAY_AWAKE_AFTER_KEY_MS = 300;
 // Clicker radio costs ~+25 mA (45 connected / 49 advertising vs 21 awake, measured on
 // the gauge): switch it off after this long with no page key, so a forgotten clicker
 // doesn't drain the battery (it also suspends auto power-off and light sleep).
+#ifdef TEST_CLICKER_IDLE_MS  // test builds only: PLATFORMIO_BUILD_FLAGS=-DTEST_CLICKER_IDLE_MS=60000
+constexpr uint32_t CLICKER_IDLE_OFF_MS = TEST_CLICKER_IDLE_MS;
+#else
 constexpr uint32_t CLICKER_IDLE_OFF_MS = 30 * 60 * 1000;
+#endif
 constexpr size_t FB_LEN = EpdUc8253::ROW_BYTES * EpdUc8253::HEIGHT;  // 52,272 bytes
 
 // Portrait page geometry (528 x 792; the bezel hides 3 px per side).
@@ -585,6 +589,13 @@ void runBench() {
              (unsigned long)x.samples);
     body += String(line) + "\n";
     log += String(line) + "; ";
+    if (x.sleeps) {  // did light sleep really sleep? (rejected / how long / what woke it)
+      snprintf(line, sizeof(line), "   sleeps %lu rej %lu avg %lu us  wake t%lu g%lu o%lu", (unsigned long)x.sleeps,
+               (unsigned long)x.rejected, (unsigned long)x.avgSleptUs, (unsigned long)x.byTimer,
+               (unsigned long)x.byGpio, (unsigned long)x.byOther);
+      body += String(line) + "\n";
+      log += String(line) + "; ";
+    }
   }
   batt = battery::read();
   body += "\nBattery now " + String(batt.percent) + "%, " + String(batt.mV) + " mV";
@@ -638,6 +649,28 @@ void goToSleep(const char* why) {
   esp_sleep_config_gpio_isolate();
   gpio_deep_sleep_hold_en();
   esp_deep_sleep_start();  // on battery we never get here: power is already gone
+}
+
+// Turning the clicker off RESTARTS the X3. Once built, the BLE controller can't
+// be removed cleanly (deinit(true): next start crashes; deinit(false): leaks
+// ~7.6 KB per cycle) and while it exists light sleep doesn't work: the bench
+// measured 19 mA idle instead of 2.0 (this Arduino build has BT controller sleep
+// and power management disabled). A restart drops it; the saved-frame fast
+// wake brings the page back in ~1 s.
+void restartWithoutClicker(const char* why) {
+  clicker::stop();  // drop the laptop cleanly first
+  Serial.printf("[%7lu] clicker off (%s) -> restarting to free the BLE stack\n", (unsigned long)millis(), why);
+  screen = Screen::Reading;
+  renderPage();  // the page, not the menu, is what the restart shows
+  savePosition();
+  wake_frame::save(canvas.getBuffer(), FB_LEN, frameMeta(bookPath, posOfPage(page)));
+  prefs.putBool("cleanSleep", true);   // the next boot may use the saved frame...
+  prefs.putBool("softRestart", true);  // ...even though it's a software reset
+  epd.deepSleep();
+  SD.end();
+  prefs.end();
+  Serial.flush();
+  esp_restart();
 }
 
 // ------------------------------------------------------------- key handling ---
@@ -769,11 +802,10 @@ void handle(const Actions& a) {
             const uint32_t before = ESP.getFreeHeap();
             clicker::start("X3 Clicker");
             Serial.printf("clicker on: heap %lu -> %lu\n", (unsigned long)before, (unsigned long)ESP.getFreeHeap());
+            showScreen(Mode::Fast);
           } else {
-            clicker::stop();
-            Serial.printf("clicker off: heap %lu\n", (unsigned long)ESP.getFreeHeap());
+            restartWithoutClicker("menu");  // does not return
           }
-          showScreen(Mode::Fast);
           break;
         case 4:  // turn landscape pages (and menus) 180 degrees
           keysLeft = !keysLeft;
@@ -822,7 +854,18 @@ void setup() {
   bootRomMs = esp_rtc_get_time_us() / 1000;
   mark("setup");
   const esp_reset_reason_t resetReason = esp_reset_reason();
-  const bool wakeBoot = (resetReason == ESP_RST_POWERON || resetReason == ESP_RST_DEEPSLEEP);
+  bool wakeBoot = (resetReason == ESP_RST_POWERON || resetReason == ESP_RST_DEEPSLEEP);
+  // A software reset counts only if WE asked for it (restartWithoutClicker); a crash
+  // is also ESP_RST_SW/PANIC and must take the normal, full-refresh path.
+  if (resetReason == ESP_RST_SW) {
+    Preferences flags;
+    flags.begin("reader", false);
+    if (flags.getBool("softRestart", false)) {
+      wakeBoot = true;
+      flags.putBool("softRestart", false);
+    }
+    flags.end();
+  }
   Serial.setRxBufferSize(8192);  // room for a 4 KB sync chunk (must be set before begin)
   Serial.begin(115200);
   Serial.setTxTimeoutMs(0);
@@ -834,7 +877,7 @@ void setup() {
     bootCount = 0;
   }
   bootCount++;
-  Serial.printf("\n=== Xteink X3 stage 10: reader === boot #%lu, reset reason %d, wake cause %d\n",
+  Serial.printf("\n=== Xteink X3 stage 15: reader === boot #%lu, reset reason %d, wake cause %d\n",
                 (unsigned long)bootCount, (int)resetReason, (int)esp_sleep_get_wakeup_cause());
   // NVS first: a clean wake needs the book/position/font to validate the saved frame.
   prefs.begin("reader", false);
@@ -942,10 +985,9 @@ void loop() {
   // ...nor during a talk: the clicker's radio must stay up (and a talk can go
   // 5 min without a key press). But a forgotten clicker turns itself off.
   if (clicker::state() != clicker::State::Off && millis() - lastKeyEvent > CLICKER_IDLE_OFF_MS) {
-    clicker::stop();
-    Serial.printf("[%7lu] clicker: %lu min without a key -> off\n", (unsigned long)millis(),
-                  (unsigned long)(CLICKER_IDLE_OFF_MS / 60000));
-    lastActivity = millis();  // normal idle rules (light sleep, auto power-off) resume from now
+    Serial.printf("[%7lu] clicker: %lu s without a key\n", (unsigned long)millis(),
+                  (unsigned long)(CLICKER_IDLE_OFF_MS / 1000));
+    restartWithoutClicker("idle time-out");  // does not return
   }
   const bool clickerOn = clicker::state() != clicker::State::Off;
   if (!HWCDC::isPlugged() && !clickerOn && millis() - lastActivity > SLEEP_AFTER_MS) {

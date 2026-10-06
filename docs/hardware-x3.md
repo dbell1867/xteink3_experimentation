@@ -136,6 +136,10 @@ Within ~30 counts of X4 → CrossPoint thresholds (3100/2090/750, 1120) apply; a
 - UI: tap Back = menu (Contents / Books / Text size / Clean screen); Back/Confirm act on release everywhere; key events
   queued and handled outside refreshes. Per-book positions in NVS key "p"+CRC32(path). UI font Noto Sans 20 px (cp1252).
 
+## SD card standby (stage 15b)
+- Keeping a file open after a 52 KB read (one multi-block read) left the card active: light sleep 18.6 mA instead of
+  2.0. Open/read/close per page -> 2.0 mA. The .txt reader (512-byte reads, file kept open) was never affected.
+
 ## Unknowns / to verify
 - Earlier USB drops = magnetic cable detaching. One reboot (10:35:49) still unexplained.
 - Is −20 mA on USB = charge terminated, battery feeding system?
