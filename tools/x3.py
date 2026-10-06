@@ -18,6 +18,9 @@ Commands:
 The X3 is found by its USB id (303a:1001) and its answer to @HELLO, not by a fixed
 /dev/ttyACM0 (it re-enumerates as ttyACM1 at times). Opening the port doesn't reset it.
 Protocol: src/sync_server.h (version 2: one folder level).
+
+Also a library for the marimo manager (~/Work/Python/Marimo/x3_manager): the functions
+under "API" print progress and raise X3Error instead of exiting.
 """
 import argparse
 import ast
@@ -44,6 +47,10 @@ PROTOCOL = 2
 # Markdown files in a docs folder that aren't lessons (when a series has no include= glob)
 NOT_LESSONS = {"readme", "plan", "changelog", "license", "contributing", "todo"}
 DOCS_NAMES = {"docs", "doc", "lessons"}  # "<project>/docs" -> series named after the project
+
+
+class X3Error(Exception):
+    """Something the user must fix (no X3, name taken, ...): the message says what."""
 
 
 # ------------------------------------------------------------------ library ---
@@ -213,6 +220,8 @@ class Link:
 
     def close(self):
         self.s.close()
+        if getattr(self, "lock", None):
+            self.lock.release()  # a long-running app must not keep the X3 locked
 
 
 class Lock:
@@ -233,6 +242,12 @@ class Lock:
                     return False
                 time.sleep(0.5)
 
+    def release(self):
+        try:
+            fcntl.flock(self.f, fcntl.LOCK_UN)
+        finally:
+            self.f.close()
+
 
 def candidate_ports():
     from serial.tools import list_ports
@@ -240,10 +255,11 @@ def candidate_ports():
 
 
 def connect(wait):
-    """Find the X3 (wait up to `wait` s for it to appear) -> Link, or exit with a message."""
+    """Find the X3 (wait up to `wait` s for it to appear) -> Link; X3Error if it can't."""
     lock = Lock()
     if not lock.acquire(wait=max(wait, 5)):
-        sys.exit("another x3 is talking to the X3 (auto-sync?) - try again in a moment")
+        lock.f.close()
+        raise X3Error("another x3 is talking to the X3 (auto-sync?) - try again in a moment")
     end = time.time() + wait
     said = False
     while True:
@@ -258,10 +274,12 @@ def connect(wait):
                 return link
             link.close()
             if version:
-                sys.exit(f"{port}: X3 firmware speaks sync protocol {version}, x3 needs {PROTOCOL} - "
-                         "flash the current firmware (pio run -t upload)")
+                lock.release()
+                raise X3Error(f"{port}: X3 firmware speaks sync protocol {version}, x3 needs {PROTOCOL} - "
+                              "flash the current firmware (pio run -t upload)")
         if time.time() >= end:
-            sys.exit("no X3 found - plug it in (it boots by itself); is the reader firmware on it?")
+            lock.release()
+            raise X3Error("no X3 found - plug it in (if it still says Sleeping after 5 s, press Power)")
         if not said:
             print(f"waiting up to {wait:.0f} s for the X3 - plug it in ...")
             said = True
@@ -298,61 +316,112 @@ def put(link, name, data):
     return link.reply(15)
 
 
-# ----------------------------------------------------------------- commands ---
+# ---------------------------------------------------------------------- API ---
 
-def cmd_add(a):
-    src = os.path.abspath(os.path.expanduser(a.path))
+def sources():
+    """The library's entries: [{kind, name, target, ok}] (kind 'lessons' or 'talks')."""
+    out = []
+    for sub in ("lessons", "talks"):
+        root = os.path.join(LIB, sub)
+        for entry in sorted(os.listdir(root)) if os.path.isdir(root) else []:
+            if entry.startswith("."):
+                continue
+            path = os.path.join(root, entry)
+            target = os.readlink(path) if os.path.islink(path) else path
+            out.append({"kind": sub, "name": entry, "target": target, "ok": os.path.isdir(path)})
+    return out
+
+
+def add_source(path, name=None, include=None):
+    """Link a lessons folder or a marimo deck folder into the library.
+    Returns {kind, name, target, devices, already}; X3Error if it can't."""
+    src = os.path.abspath(os.path.expanduser(path))
     if os.path.isfile(src) and src.endswith(".py"):
         src = os.path.dirname(src)
     if not os.path.isdir(src):
-        sys.exit(f"{a.path}: not a folder")
+        raise X3Error(f"{path}: not a folder")
     if deck_files(src):
-        kind, sub = "talk", "talks"
-        name = a.name or os.path.basename(src)
+        sub = "talks"
+        name = name or os.path.basename(src)
     elif glob.glob(os.path.join(src, "*.md")):
-        kind, sub = "lessons", "lessons"
+        sub = "lessons"
         base = os.path.basename(src)
-        name = a.name or (os.path.basename(os.path.dirname(src)) if base.lower() in DOCS_NAMES else base)
+        name = name or (os.path.basename(os.path.dirname(src)) if base.lower() in DOCS_NAMES else base)
     else:
-        sys.exit(f"{src}: neither a marimo deck (a .py with a *.slides.json layout) nor a folder of .md files")
-    if a.include and kind != "lessons":
-        sys.exit("--include is for lesson folders")
+        raise X3Error(f"{src}: neither a marimo deck (a .py with a *.slides.json layout) nor a folder of .md files")
+    if include and sub != "lessons":
+        raise X3Error("an include pattern is for lesson folders only")
     name = safe(name)
     link = os.path.join(LIB, sub, name)
-    os.makedirs(os.path.dirname(link), exist_ok=True)
+    already = False
     if os.path.lexists(link):
         if os.path.islink(link) and os.path.realpath(link) == os.path.realpath(src):
-            print(f"already there: {sub}/{name} -> {src}")
+            already = True
         else:
-            sys.exit(f"{sub}/{name} already exists (-> {os.path.realpath(link)}); pick another --name")
+            raise X3Error(f"{sub}/{name} already exists (-> {os.path.realpath(link)}); pick another name")
     else:
+        os.makedirs(os.path.dirname(link), exist_ok=True)
         os.symlink(src, link)
-        print(f"added {kind}: {sub}/{name} -> {src}")
-    if a.include:
-        set_include(name, a.include)
-    items = [i for i in library()[0] if i.device.startswith(("talks/" if kind == "talk" else name + "/"))]
-    shown = [i.device for i in items if kind != "talk" or i.label.startswith(name)]
-    print(f"  on the X3 as: {', '.join(shown) if shown else '(nothing - check the folder)'}")
+    if include:
+        set_include(name, include)
+    prefix = "talks/" if sub == "talks" else name + "/"
+    devices = [i.device for i in library()[0]
+               if i.device.startswith(prefix) and (sub == "lessons" or i.label.startswith(name))]
+    return {"kind": sub, "name": name, "target": src, "devices": devices, "already": already}
+
+
+def remove_source(kind, name):
+    """Take an entry out of the library: removes the SYMLINK only, never the folder it points to.
+    Files already on the X3 stay there (x3 rm)."""
+    link = os.path.join(LIB, kind, name)
+    if not os.path.islink(link):
+        raise X3Error(f"{kind}/{name} is not a library link - not touching it")
+    os.remove(link)
+    if kind == "lessons":
+        set_include(name, None)
 
 
 def set_include(series, pattern):
-    """Write [lessons.<series>] include = "<pattern>" into x3.toml (rest of the file kept)."""
+    """[lessons.<series>] include = "<pattern>" in x3.toml (rest of the file kept); None removes it."""
     path = os.path.join(LIB, "x3.toml")
     text = open(path, encoding="utf-8").read() if os.path.exists(path) else ""
-    block = f'[lessons.{series}]\ninclude = "{pattern}"\n'
-    pat = re.compile(rf"^\[lessons\.{re.escape(series)}\]\n(?:[^\[\n].*\n?)*", re.M)
-    text = pat.sub(block, text) if pat.search(text) else (text.rstrip("\n") + "\n\n" if text else "") + block
-    open(path, "w", encoding="utf-8").write(text)
-    print(f"  {series}: only files matching {pattern} (in {path})")
+    block = f'[lessons.{series}]\ninclude = "{pattern}"\n' if pattern else ""
+    pat = re.compile(rf"^\[lessons\.{re.escape(series)}\]\n(?:[^\[\n].*\n?)*\n?", re.M)
+    if pat.search(text):
+        text = pat.sub(block + ("\n" if block else ""), text).rstrip("\n") + "\n"
+    elif block:
+        text = (text.rstrip("\n") + "\n\n" if text.strip() else "") + block
+    if text.strip():
+        open(path, "w", encoding="utf-8").write(text)
+    elif os.path.exists(path):
+        os.remove(path)
 
 
-def cmd_build(a):
-    items, problems = library()
-    for p in problems:
-        print("  problem:", p)
-    built, failed = build(items, quiet=not a.verbose)
-    print(f"build: {len(built)} rendered, {len(items) - len(built) - len(failed)} up to date, {len(failed)} failed")
-    return 1 if failed else 0
+def device_files(wait=5):
+    """{name: (size, crc32)} of everything in /books on the X3 (~1 s per MB: it CRCs each file)."""
+    link = connect(wait)
+    try:
+        return remote_list(link)
+    finally:
+        finish(link)
+
+
+def status_rows(items, remote):
+    """One row per library item, plus the files only on the X3 (remote=None: X3 not checked)."""
+    rows = []
+    for it in items:
+        if it.stale():
+            state = "needs render"
+        elif remote is None:
+            state = "rendered"
+        else:
+            state = dict(compare([it], remote))[it.device]
+        rows.append({"file": it.device, "kind": it.kind, "state": state, "source": it.sources[0]})
+    if remote is not None:
+        mine = {it.device for it in items}
+        rows += [{"file": n, "kind": "-", "state": "only on the X3", "source": ""}
+                 for n in sorted(remote) if n not in mine]
+    return rows
 
 
 def compare(items, remote):
@@ -371,92 +440,37 @@ def compare(items, remote):
     return rows
 
 
-def cmd_status(a):
-    items, problems = library()
-    print(f"library {LIB}: {len(items)} files")
-    for p in problems:
-        print("  problem:", p)
-    remote = None
-    if candidate_ports():
-        link = connect(wait=5)
-        remote = remote_list(link)
-        finish(link)
-    else:
-        print("  (X3 not plugged in: showing the library only)")
-    for it in items:
-        if it.stale():
-            state = "needs render" + ("" if remote is None else ", then send")
-        elif remote is None:
-            state = "rendered"
-        else:
-            state = dict(compare([it], remote))[it.device]
-        print(f"  {it.device:48s} {state}")
-    if remote is not None:
-        mine = {it.device for it in items}
-        others = sorted(n for n in remote if n not in mine)
-        if others:
-            print(f"only on the X3 ({len(others)}) - sync leaves these alone; remove with x3 rm <name>:")
-            for n in others:
-                print(f"  {n}")
-    return 0
-
-
-def notify(title, body, urgent=False):
-    """Desktop notification (auto-sync has no terminal). Never fails the sync.
-    Omarchy's own sender first: notify-send reached its daemon (exit 0) but never showed."""
-    urgency = "critical" if urgent else "normal"
-    for cmd in (["omarchy-notification-send", "--app-name", "x3", "-u", urgency, title, body],
-                ["notify-send", "-a", "x3", "-u", urgency, title, body]):
-        try:
-            if subprocess.run(cmd, timeout=5, check=False).returncode == 0:
-                return
-        except (OSError, subprocess.TimeoutExpired):
-            continue
-
-
-def cmd_sync(a):
-    if a.auto and os.path.exists(PAUSED):
-        print("auto-sync is off (x3 auto on to resume)")
-        return 0
-    try:
-        code, summary = sync(a)
-    except SystemExit as e:  # connect() and friends exit with a message
-        if a.notify and isinstance(e.code, str):
-            notify("X3 sync failed", e.code, urgent=True)
-        raise
-    if a.notify:
-        notify("X3 synced" if code == 0 else "X3 sync: problems", summary, urgent=code != 0)
-    return code
-
-
-def sync(a):
+def sync(wait=30, verbose=False):
+    """Render what changed, send what differs, never delete. Returns (exit code, one-line summary)."""
     items, problems = library()
     for p in problems:
         print("  problem:", p)
-    built, failed = build(items, quiet=not a.verbose)
+    built, failed = build(items, quiet=not verbose)
     ready = [it for it in items if os.path.exists(it.xtc) and it not in failed]
-    link = connect(wait=a.wait)
-    print(f"X3 on {link.port}")
-    link.send("@DATE " + time.strftime("%-d %b %H:%M"))
-    link.reply()
-    t0 = time.time()
-    remote = remote_list(link)
-    list_s = time.time() - t0
+    link = connect(wait)
+    try:
+        print(f"X3 on {link.port}")
+        link.send("@DATE " + time.strftime("%-d %b %H:%M"))
+        link.reply()
+        t0 = time.time()
+        remote = remote_list(link)
+        list_s = time.time() - t0
 
-    sent, errors, nbytes, t1 = [], [], 0, time.time()
-    for it in ready:
-        data = open(it.xtc, "rb").read()
-        if remote.get(it.device) == (len(data), zlib.crc32(data)):
-            continue
-        r = put(link, it.device, data)
-        print(f"  {it.device}: {r} ({len(data) // 1024} KB)")
-        if r == "@OK":
-            sent.append(it.device)
-            nbytes += len(data)
-        else:
-            errors.append(f"{it.device}: {r}")
-    put_s = time.time() - t1
-    finish(link)
+        sent, errors, nbytes, t1 = [], [], 0, time.time()
+        for it in ready:
+            data = open(it.xtc, "rb").read()
+            if remote.get(it.device) == (len(data), zlib.crc32(data)):
+                continue
+            r = put(link, it.device, data)
+            print(f"  {it.device}: {r} ({len(data) // 1024} KB)")
+            if r == "@OK":
+                sent.append(it.device)
+                nbytes += len(data)
+            else:
+                errors.append(f"{it.device}: {r}")
+        put_s = time.time() - t1
+    finally:
+        finish(link)
 
     rate = f", {nbytes / 1024 / put_s:.0f} KB/s" if nbytes else ""
     others = sorted(n for n in remote if n not in {it.device for it in items})
@@ -472,9 +486,89 @@ def sync(a):
     return (1 if errors or failed else 0), summary
 
 
+def delete(names, wait=10):
+    """Delete exact names from the X3 (the caller has asked the user). Returns {name: reply}."""
+    link = connect(wait)
+    out = {}
+    try:
+        for n in names:
+            link.send(f"@DEL {n}")
+            out[n] = link.reply()
+            print(f"  {n}: {out[n]}")
+    finally:
+        finish(link)
+    return out
+
+
+def notify(title, body, urgent=False):
+    """Desktop notification (auto-sync has no terminal). Never fails the sync.
+    Omarchy's own sender first: notify-send reached its daemon (exit 0) but never showed."""
+    urgency = "critical" if urgent else "normal"
+    for cmd in (["omarchy-notification-send", "--app-name", "x3", "-u", urgency, title, body],
+                ["notify-send", "-a", "x3", "-u", urgency, title, body]):
+        try:
+            if subprocess.run(cmd, timeout=5, check=False).returncode == 0:
+                return
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+
+
+# ---------------------------------------------------------- command line ---
+
+def cmd_add(a):
+    r = add_source(a.path, a.name, a.include)
+    print(("already there: " if r["already"] else f"added {r['kind']}: ") + f"{r['kind']}/{r['name']} -> {r['target']}")
+    if a.include:
+        print(f"  {r['name']}: only files matching {a.include} (in {os.path.join(LIB, 'x3.toml')})")
+    print(f"  on the X3 as: {', '.join(r['devices']) if r['devices'] else '(nothing - check the folder)'}")
+
+
+def cmd_build(a):
+    items, problems = library()
+    for p in problems:
+        print("  problem:", p)
+    built, failed = build(items, quiet=not a.verbose)
+    print(f"build: {len(built)} rendered, {len(items) - len(built) - len(failed)} up to date, {len(failed)} failed")
+    return 1 if failed else 0
+
+
+def cmd_status(a):
+    items, problems = library()
+    print(f"library {LIB}: {len(items)} files")
+    for p in problems:
+        print("  problem:", p)
+    remote = device_files() if candidate_ports() else None
+    if remote is None:
+        print("  (X3 not plugged in: showing the library only)")
+    rows = status_rows(items, remote)
+    for r in rows:
+        if r["state"] != "only on the X3":
+            print(f"  {r['file']:48s} {r['state']}")
+    others = [r["file"] for r in rows if r["state"] == "only on the X3"]
+    if others:
+        print(f"only on the X3 ({len(others)}) - sync leaves these alone; remove with x3 rm <name>:")
+        for n in others:
+            print(f"  {n}")
+    return 0
+
+
+def cmd_sync(a):
+    if a.auto and os.path.exists(PAUSED):
+        print("auto-sync is off (x3 auto on to resume)")
+        return 0
+    try:
+        code, summary = sync(a.wait, a.verbose)
+    except X3Error as e:
+        if a.notify:
+            notify("X3 sync failed", str(e), urgent=True)
+        raise
+    if a.notify:
+        notify("X3 synced" if code == 0 else "X3 sync: problems", summary, urgent=code != 0)
+    return code
+
+
 def cmd_rm(a):
-    link = connect(wait=a.wait)
-    remote = remote_list(link)
+    remote = device_files(a.wait)
     names = []
     for pat in a.names:
         hits = sorted(n for n in remote if fnmatch.fnmatch(n, pat))
@@ -482,19 +576,14 @@ def cmd_rm(a):
             print(f"  not on the X3: {pat}")
         names += [h for h in hits if h not in names]
     if not names:
-        finish(link)
         return 1
     print("delete from the X3:")
     for n in names:
         print(f"  {n}")
     if not a.yes and input(f"delete these {len(names)} file(s)? [y/N] ").strip().lower() != "y":
         print("nothing deleted")
-        finish(link)
         return 1
-    for n in names:
-        link.send(f"@DEL {n}")
-        print(f"  {n}: {link.reply()}")
-    finish(link)
+    delete(names, a.wait)
     return 0
 
 
@@ -544,7 +633,10 @@ def main():
     p.add_argument("--wait", type=float, default=10)
     p.set_defaults(fn=cmd_rm)
     a = ap.parse_args()
-    sys.exit(a.fn(a) or 0)
+    try:
+        sys.exit(a.fn(a) or 0)
+    except X3Error as e:
+        sys.exit(str(e))
 
 
 if __name__ == "__main__":
