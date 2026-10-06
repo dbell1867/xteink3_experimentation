@@ -498,6 +498,31 @@ def write_xtc(path, images, title, chapters, author=""):
     return len(out)
 
 
+def build(markdown, outdir, xtc=None, orient="landscape", F=None):
+    """Render one Markdown file: PNG pages in outdir, optionally an .xtc. Returns (pages, xtc size)."""
+    W, H = (528, 792) if orient == "portrait" else (792, 528)
+    F = F or Fonts()
+    text = open(markdown, encoding="utf-8").read()
+    title = os.path.splitext(os.path.basename(markdown))[0]
+    pages = paginate(F, layout(F, parse(text), W), W, H)
+    os.makedirs(outdir, exist_ok=True)
+    images = []
+    for n, page in enumerate(pages, 1):
+        img = render(F, page, W, H, n, len(pages), title)
+        img.save(os.path.join(outdir, f"page-{n:03d}.png"))
+        images.append(img)
+    size = 0
+    if xtc:
+        h1 = next((r[4][1] for p in pages for _, r in p if r[0] == "text" and len(r) > 4 and r[4] and r[4][0] == 1), title)
+        chapters = chapters_from(pages)
+        size = write_xtc(xtc, images, h1, chapters)
+        print(f"  xtc: {xtc} ({size // 1024} KB, {len(chapters)} chapters, title {h1!r})")
+    print(f"{markdown}: {len(pages)} pages ({orient} {W}x{H}) -> {outdir}")
+    if MISSING:
+        print("  WARNING no font has: " + " ".join(f"U+{ord(c):04X} {c}" for c in sorted(MISSING)))
+    return len(pages), size
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("markdown")
@@ -505,25 +530,7 @@ def main():
     ap.add_argument("--orient", choices=["portrait", "landscape"], default="landscape")  # chosen for lessons
     ap.add_argument("--xtc", help="also write the pages as an Xteink .xtc file")
     a = ap.parse_args()
-    W, H = (528, 792) if a.orient == "portrait" else (792, 528)
-    F = Fonts()
-    text = open(a.markdown, encoding="utf-8").read()
-    title = os.path.splitext(os.path.basename(a.markdown))[0]
-    pages = paginate(F, layout(F, parse(text), W), W, H)
-    os.makedirs(a.outdir, exist_ok=True)
-    images = []
-    for n, page in enumerate(pages, 1):
-        img = render(F, page, W, H, n, len(pages), title)
-        img.save(os.path.join(a.outdir, f"page-{n:03d}.png"))
-        images.append(img)
-    if a.xtc:
-        h1 = next((r[4][1] for p in pages for _, r in p if r[0] == "text" and len(r) > 4 and r[4] and r[4][0] == 1), title)
-        chapters = chapters_from(pages)
-        size = write_xtc(a.xtc, images, h1, chapters)
-        print(f"  xtc: {a.xtc} ({size // 1024} KB, {len(chapters)} chapters, title {h1!r})")
-    print(f"{a.markdown}: {len(pages)} pages ({a.orient} {W}x{H}) -> {a.outdir}")
-    if MISSING:
-        print("  WARNING no font has: " + " ".join(f"U+{ord(c):04X} {c}" for c in sorted(MISSING)))
+    build(a.markdown, a.outdir, a.xtc, a.orient)
 
 
 if __name__ == "__main__":

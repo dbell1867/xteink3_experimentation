@@ -1,4 +1,4 @@
-# PC-side tools: fontconvert.py, mdpages.py, xtcinfo.py, pagesim.py, x3sync.py
+# PC-side tools: fontconvert.py, mdpages.py, xtcinfo.py, pagesim.py, x3.py
 freetype-py
 pillow
 markdown-it-py

@@ -130,7 +130,9 @@ enum class Screen { Reading, Menu, Contents, Books };
 Screen screen = Screen::Reading;
 
 String bookPath;
-std::vector<String> bookPaths;  // all .txt books found, sorted
+std::vector<String> bookPaths;  // all books found (/books and its folders), sorted
+bool sdOk = false;              // SD card mounted (setup)
+String booksDir;                // Books screen: "" = top level, else a folder ("xteink3", "talks")
 int page = 0;
 int pagesUntilClean = CLEAN_EVERY;
 int sel = 0;  // selected row in the current menu/list
@@ -402,9 +404,60 @@ std::vector<String> contentsRows() {
   return r;
 }
 
+// "/books/xteink3/lesson-01.xtc" -> "xteink3"; "" for a book directly in /books (or the root).
+String folderOfBook(const String& path) {
+  if (!path.startsWith("/books/")) return "";
+  const String rest = path.substring(7);
+  const int slash = rest.indexOf('/');
+  return slash < 0 ? "" : rest.substring(0, slash);
+}
+
+// One row of the Books screen: a folder (top level only) or a book.
+struct BooksEntry {
+  String folder;  // set for a folder row
+  String path;    // set for a book row
+};
+
+// Top level: folders first (a lesson series, "talks"), then books directly in /books.
+// Inside a folder: its books. Built from bookPaths, so no SD access.
+std::vector<BooksEntry> booksEntries() {
+  std::vector<BooksEntry> e;
+  if (booksDir.isEmpty()) {
+    for (const String& p : bookPaths) {
+      const String f = folderOfBook(p);
+      if (!f.isEmpty() && (e.empty() || e.back().folder != f)) e.push_back({f, ""});  // sorted: folders group
+    }
+  }
+  for (const String& p : bookPaths)
+    if (folderOfBook(p) == booksDir) e.push_back({"", p});
+  return e;
+}
+
+// Where the open book is in booksEntries() (its folder's row at the top level).
+int booksIndexOfOpenBook() {
+  const auto e = booksEntries();
+  for (int i = 0; i < (int)e.size(); i++)
+    if (e[i].path == bookPath || (!e[i].folder.isEmpty() && e[i].folder == folderOfBook(bookPath))) return i;
+  return 0;
+}
+
+String booksTitle() {
+  if (!booksDir.isEmpty()) return "Books \xBB " + booksDir;  // 0xBB = >>
+  const String when = prefs.getString("synced", "");
+  return when.isEmpty() ? String("Books") : "Books   synced " + when;
+}
+
 std::vector<String> booksRows() {
   std::vector<String> r;
-  for (const String& p : bookPaths) {
+  for (const BooksEntry& en : booksEntries()) {
+    if (!en.folder.isEmpty()) {
+      int n = 0;
+      for (const String& p : bookPaths) n += folderOfBook(p) == en.folder;
+      const bool here = folderOfBook(bookPath) == en.folder;
+      r.push_back(String(here ? "\x95 " : "   ") + en.folder + "/   " + n + (n == 1 ? " book" : " books"));
+      continue;
+    }
+    const String& p = en.path;
     const uint32_t pos = prefs.getUInt(posKey(p).c_str(), 0);
     int pct;
     if (isXtc(p)) {  // position = page number
@@ -433,7 +486,8 @@ void showScreen(Mode mode) {
       drawList("Contents", contentsRows(), sel, "Confirm go  Back menu");
       break;
     case Screen::Books:
-      drawList("Books", booksRows(), sel, "Confirm open  Back menu");
+      drawList(booksTitle(), booksRows(), sel,
+               booksDir.isEmpty() ? "Confirm open  Back menu" : "Confirm open  Back folders");
       break;
   }
   if (mode == Mode::Fast) refreshTurn();
@@ -446,7 +500,7 @@ int listLength() {
   switch (screen) {
     case Screen::Menu: return menuRows().size();
     case Screen::Contents: return max(1, numChapters());
-    case Screen::Books: return bookPaths.size();
+    case Screen::Books: return booksEntries().size();
     default: return 0;
   }
 }
@@ -488,16 +542,31 @@ int indexBook() {
   return book.pageCount();
 }
 
-// All *.txt in /books (or in the root if /books has none), sorted by name.
+bool isBookName(const String& n) { return n.endsWith(".txt") || n.endsWith(".TXT") || isXtc(n); }
+
+// All books (.txt, .xtc) in /books and its folders, one level deep (a lesson
+// series per folder, synced by tools/x3.py), or in the root if /books has none.
+// Sorted by path, so each folder's books are together.
 void findBooks() {
   bookPaths.clear();
   for (const char* dirName : {"/books", "/"}) {
     File dir = SD.open(dirName);
     if (!dir || !dir.isDirectory()) continue;
+    std::vector<String> subdirs;
     for (File f = dir.openNextFile(); f; f = dir.openNextFile()) {
       const String name = f.name();
-      if (!f.isDirectory() && (name.endsWith(".txt") || name.endsWith(".TXT") || isXtc(name)))
+      if (f.isDirectory()) {
+        if (strcmp(dirName, "/books") == 0 && name[0] != '.') subdirs.push_back(f.path());
+      } else if (isBookName(name)) {
         bookPaths.push_back(f.path());
+      }
+    }
+    dir.close();
+    for (const String& d : subdirs) {
+      File sub = SD.open(d);
+      for (File f = sub.openNextFile(); f; f = sub.openNextFile())
+        if (!f.isDirectory() && isBookName(f.name())) bookPaths.push_back(f.path());
+      sub.close();
     }
     if (!bookPaths.empty()) break;
   }
@@ -724,9 +793,10 @@ void collect(Actions& a) {
 // After a USB sync: refresh the book list; if the open book was replaced or
 // removed, reopen (or fall back to the first book) and forget the saved wake frame.
 void afterSync(const sync_server::Result& r) {
+  if (r.completed && !r.date.isEmpty()) prefs.putString("synced", r.date);  // even with 0 changes: it's current
   if (r.changed.empty()) return;
   findBooks();
-  const String openName = bookPath.substring(bookPath.lastIndexOf('/') + 1);
+  const String openName = bookPath.startsWith("/books/") ? bookPath.substring(7) : bookPath;  // as the PC names it
   const bool openChanged = std::find(r.changed.begin(), r.changed.end(), openName) != r.changed.end();
   const bool stillThere = std::find(bookPaths.begin(), bookPaths.end(), bookPath) != bookPaths.end();
   if (openChanged || !stillThere) {
@@ -775,6 +845,13 @@ void handle(const Actions& a) {
     if (screen == Screen::Menu) {
       screen = Screen::Reading;
       showScreen(Mode::Half);  // back to the page: clean, no flash
+    } else if (screen == Screen::Books && !booksDir.isEmpty()) {
+      const String was = booksDir;  // up to the folder list, on the folder we came from
+      booksDir = "";
+      const auto e = booksEntries();
+      int i = 0;
+      while (i < (int)e.size() && e[i].folder != was) i++;
+      enter(Screen::Books, i < (int)e.size() ? i : 0);
     } else {
       enter(Screen::Menu, screen == Screen::Contents ? 0 : 1);
     }
@@ -784,11 +861,10 @@ void handle(const Actions& a) {
     if (screen == Screen::Menu) {
       switch (sel) {
         case 0: enter(Screen::Contents, max(0, chapterAt(page))); break;
-        case 1: {
-          const auto it = std::find(bookPaths.begin(), bookPaths.end(), bookPath);
-          enter(Screen::Books, it == bookPaths.end() ? 0 : int(it - bookPaths.begin()));
+        case 1:  // Books: open in the folder of the book being read
+          booksDir = folderOfBook(bookPath);
+          enter(Screen::Books, booksIndexOfOpenBook());
           break;
-        }
         case 2: {  // next text size, keep the first word on screen
           if (xtcMode) break;  // pre-rendered: the size is fixed
           const uint32_t pos = book.pageStart(page);
@@ -828,9 +904,16 @@ void handle(const Actions& a) {
         resyncSlides();  // presenter: the laptop jumps too
       }
     } else if (screen == Screen::Books) {
-      if (bookPaths[sel] != bookPath) {
+      const auto e = booksEntries();
+      if (sel >= (int)e.size()) return;
+      if (!e[sel].folder.isEmpty()) {  // into the folder, on the open book if it's there
+        booksDir = e[sel].folder;
+        enter(Screen::Books, booksIndexOfOpenBook());
+        return;
+      }
+      if (e[sel].path != bookPath) {
         savePosition();
-        openBook(bookPaths[sel]);
+        if (!openBook(e[sel].path)) openBook(bookPath);  // unreadable: stay with the current book
       }
       screen = Screen::Reading;
       showScreen(Mode::Half);
@@ -915,7 +998,7 @@ void setup() {
   }
 
   // Timed separately: is a slow cold mount the card itself, or a failed 25 MHz try?
-  bool sdOk = SD.begin(pins::SD_CS, SPI, 25000000);
+  sdOk = SD.begin(pins::SD_CS, SPI, 25000000);
   mark(sdOk ? "sd@25M ok" : "sd@25M FAIL");
   if (!sdOk) {
     SD.end();
@@ -960,20 +1043,30 @@ void setup() {
 
 void loop() {
   buttons.update();
+  // USB sync from the PC (tools/x3.py): only while a computer is on the bus.
+  // Before the "no book" check, so an empty card can be filled over USB.
+  if (sdOk && HWCDC::isPlugged() && Serial.available()) {
+    sync_server::Result r;
+    if (sync_server::poll(SD, r, [] { notice("Syncing over USB\x85"); })) {
+      Serial.printf("sync: %d changed, %d failed%s\n", (int)r.changed.size(), r.failed,
+                    r.completed ? "" : " (session timed out)");
+      if (pageCount() == 0 && !r.changed.empty()) {  // there was no book: open the first one
+        findBooks();
+        if (!bookPaths.empty()) openBook(bookPaths[0]);
+      }
+      afterSync(r);
+      if (pageCount() > 0) {
+        screen = Screen::Reading;
+        showScreen(Mode::Half);
+      } else {
+        message("No readable book.", "Sync one from the PC: x3 sync");
+      }
+    }
+  }
+
   if (pageCount() == 0) {
     delay(10);
     return;
-  }
-
-  // USB sync from the PC (tools/x3sync.py): only while a computer is on the bus.
-  if (HWCDC::isPlugged() && Serial.available()) {
-    sync_server::Result r;
-    if (sync_server::poll(SD, r, [] { notice("Syncing over USB\x85"); })) {
-      Serial.printf("sync: %d changed, %d failed\n", (int)r.changed.size(), r.failed);
-      afterSync(r);
-      screen = Screen::Reading;
-      showScreen(Mode::Half);
-    }
   }
 
   Actions a;

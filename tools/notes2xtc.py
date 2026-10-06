@@ -157,37 +157,43 @@ def render_step(F, hfont, k, seq, deck, W=792, H=528):
     return img, overflow
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("deck")
-    ap.add_argument("--out", default=os.path.join(os.path.dirname(HERE), "build", "xtc"))
-    a = ap.parse_args()
-    cells, lcells = cells_and_layout(a.deck)
+def build(deck, xtc, preview, name=None, F=None):
+    """Render a deck's talking points: one page per step -> xtc, PNGs in preview.
+    Returns the steps whose notes were cut off (empty list = all fit)."""
+    cells, lcells = cells_and_layout(deck)
     seq = steps(cells, lcells)
-    name = os.path.splitext(os.path.basename(a.deck))[0]
-    deck_dir = os.path.basename(os.path.dirname(os.path.abspath(a.deck)))
+    name = name or os.path.basename(os.path.dirname(os.path.abspath(deck)))
 
-    F = mdpages.Fonts()
+    F = F or mdpages.Fonts()
     hfont = mdpages.Font("NotoSerif-Bold.ttf", 30)
     images, chapters, overflow = [], [], []
     for k in range(len(seq)):
-        img, over = render_step(F, hfont, k, seq, f"talk: {deck_dir}")
+        img, over = render_step(F, hfont, k, seq, f"talk: {name}")
         if over:
             overflow.append(k + 1)
         images.append(img)
         if seq[k][2] == "slide":
             chapters.append((f"{seq[k][0]} · {seq[k][1]}", k))
-    os.makedirs(a.out, exist_ok=True)
-    xtc = os.path.join(a.out, f"talk-{deck_dir}.xtc")
-    size = mdpages.write_xtc(xtc, images, f"Talk: {deck_dir}", chapters)
-    preview = os.path.join(os.path.dirname(a.out), "pages", f"talk-{deck_dir}")
+    os.makedirs(os.path.dirname(xtc) or ".", exist_ok=True)
+    size = mdpages.write_xtc(xtc, images, f"Talk: {name}", chapters)
     os.makedirs(preview, exist_ok=True)
     for k, img in enumerate(images, 1):
         img.save(os.path.join(preview, f"page-{k:03d}.png"))
-    print(f"{a.deck}: {len(cells)} cells -> {len(seq)} steps on {seq[-1][0] if seq else 0} slides")
+    print(f"{deck}: {len(cells)} cells -> {len(seq)} steps on {seq[-1][0] if seq else 0} slides")
     print(f"  {xtc} ({size // 1024} KB), previews in {preview}")
     if overflow:
         print(f"  WARNING: notes cut off on steps {overflow} - shorten them (one page per step)")
+    return overflow
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("deck")
+    ap.add_argument("--out", default=os.path.join(os.path.dirname(HERE), "build", "xtc"))
+    a = ap.parse_args()
+    deck_dir = os.path.basename(os.path.dirname(os.path.abspath(a.deck)))
+    build(a.deck, os.path.join(a.out, f"talk-{deck_dir}.xtc"),
+          os.path.join(os.path.dirname(a.out), "pages", f"talk-{deck_dir}"))
 
 
 if __name__ == "__main__":
