@@ -9,8 +9,9 @@
   Clicker turns itself off after 30 min without a key (built, NOT yet tested). Uses ~45 mA connected / 49 advertising (gauge, on battery).
 - **Talk workflow:** marimo speaker notes -> tools/notes2xtc.py -> tools/x3sync.py.
 - **Lesson workflow:** edit docs/lesson-*.md -> `.venv/bin/python tools/x3sync.py` (X3 awake + plugged in).
-- **Next (pick):** parked long-press redesign; skill update (G35 BLE HID data point, G34 HID notes); lesson 06
-  (lessons pipeline + talking points + clicker); two-way helper only if one-way drift hurts in real talks.
+- **Next (pick):** parked long-press redesign; skill update (G35 BLE HID data point, G34 HID notes);
+  test the 30-min clicker auto-off; two-way helper only if one-way drift hurts in real talks.
+- **Lesson 06** written (stages 12-15) and synced to the X3 as an .xtc.
 - **Git:** commit per stage locally; the USER pushes (never push — see memory).
 - **Workflow notes:** stop any follow_serial capture before uploading (it holds the port); don't `pkill -f` a pattern
   that's in your own shell's command line. When copying to SD: /books at card ROOT, and eject before removing.
