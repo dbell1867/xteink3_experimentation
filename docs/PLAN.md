@@ -1,8 +1,9 @@
 # Xteink X3 bring-up — plan
 
 ## Resume here
-- **Position:** Stage 15 (presenter clicker) **done** — snapshot stages/15-clicker. All 14 steps of the test deck
-  matched; back, Contents jump and resync work.
+- **Position (paused 2026-10-06):** Stage 15b **done** — snapshot stages/15b-clicker-off. Both goals work:
+  lessons on the bus (6 lessons on the X3) and marimo talking points + Bluetooth clicker (14/14 steps).
+  X3 runs the normal build (30-min clicker auto-off). Everything committed and pushed (origin/main = 5b2b5ca).
 - **Presenting:** X3 menu -> "Clicker: off" -> Confirm (radio on; laptop reconnects by itself once paired as
   "X3 Clicker"). Open talk-<deck>.xtc. Lower key = Page Down to the laptop, then the notes page; upper = Page Up;
   tap Confirm = resync laptop to the X3 (Home + n x Page Down); Contents jump resyncs too.
@@ -10,9 +11,10 @@
   saved-frame path) to drop the BLE stack. Tested with a 60 s build: no crash, no leak, laptop disconnects. Uses ~45 mA connected / 49 advertising (gauge, on battery).
 - **Talk workflow:** marimo speaker notes -> tools/notes2xtc.py -> tools/x3sync.py.
 - **Lesson workflow:** edit docs/lesson-*.md -> `.venv/bin/python tools/x3sync.py` (X3 awake + plugged in).
-- **Next (pick):** parked long-press redesign; skill update (G35 BLE HID data point, G34 HID notes);
-  test the 30-min clicker auto-off; two-way helper only if one-way drift hurts in real talks.
-- **Lesson 06** written (stages 12-15) and synced to the X3 as an .xtc.
+- **Next (pick):** parked long-press redesign; measure "build BLE once, no restart" idle power (would avoid the
+  restart on clicker-off if ~2 mA); two-way slide helper only if one-way drift hurts in real talks.
+- **Done today:** lesson 06 (stages 12-15b) on the X3; skill updated to G62 (G56 BLE HID + on/off life cycle,
+  G57-G61, G62 SD-open power; G34/G35 deinit advice corrected).
 - **Git:** commit per stage locally; the USER pushes (never push — see memory).
 - **Workflow notes:** stop any follow_serial capture before uploading (it holds the port); don't `pkill -f` a pattern
   that's in your own shell's command line. When copying to SD: /books at card ROOT, and eject before removing.
