@@ -126,5 +126,6 @@ Current status and open questions: [docs/PLAN.md](docs/PLAN.md).
 
 ## Licence
 
-No licence has been chosen yet, so all rights are reserved by default. The fonts and
-books keep their own licences (above).
+[MIT](LICENSE) for the code and docs in this repo. The fonts (SIL OFL 1.1, [fonts/](fonts/))
+and the Project Gutenberg books keep their own licences, and the generated font headers in
+`include/Noto*.h` fall under the OFL.
