@@ -1,0 +1,5 @@
+# Xteink X3: when THIS X3 appears on USB (its USB-Serial/JTAG serial number = its
+# MAC), start the user's x3-sync service. Matching the serial keeps other ESP32
+# boards (same 303a:1001 id) from triggering a sync. Install:
+#   sudo cp tools/autosync/70-x3-sync.rules /etc/udev/rules.d/ && sudo udevadm control --reload
+ACTION=="add", SUBSYSTEM=="tty", ENV{ID_VENDOR_ID}=="303a", ENV{ID_MODEL_ID}=="1001", ENV{ID_SERIAL_SHORT}=="84:C7:BB:AF:E9:30", TAG+="systemd", ENV{SYSTEMD_USER_WANTS}+="x3-sync.service"

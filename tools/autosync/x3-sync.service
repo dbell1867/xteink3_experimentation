@@ -1,0 +1,10 @@
+# Started by udev (70-x3-sync.rules) when the X3 is plugged in: render what changed
+# and send it; result as a desktop notification. Never deletes. Install:
+#   cp tools/autosync/x3-sync.service ~/.config/systemd/user/ && systemctl --user daemon-reload
+# Pause (e.g. while flashing firmware): x3 auto off.  Log: journalctl --user -u x3-sync
+[Unit]
+Description=Sync lessons and talks to the Xteink X3
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/x3 sync --auto --notify --wait 20

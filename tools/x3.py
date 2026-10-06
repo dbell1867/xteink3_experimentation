@@ -13,6 +13,7 @@ Commands:
   x3 build                                    render what changed (cache: ~/.cache/x3)
   x3 sync [--wait S]                          build, then send what differs (size + CRC32)
   x3 rm <name>...                             delete from the X3 (asks first) - sync NEVER deletes
+  x3 auto on|off|status                       auto-sync on plug-in (tools/autosync/: udev + systemd user unit)
 
 The X3 is found by its USB id (303a:1001) and its answer to @HELLO, not by a fixed
 /dev/ttyACM0 (it re-enumerates as ttyACM1 at times). Opening the port doesn't reset it.
@@ -27,6 +28,7 @@ import os
 import re
 import sys
 import time
+import subprocess
 import tomllib
 import zlib
 
@@ -36,6 +38,7 @@ sys.path.insert(0, HERE)
 LIB = os.path.expanduser(os.environ.get("X3_LIBRARY", "~/X3"))
 CACHE = os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "x3")
 USB_ID = (0x303A, 0x1001)  # Espressif USB-Serial/JTAG (any C3/S3 board: @HELLO decides)
+PAUSED = os.path.join(CACHE, "auto-paused")  # x3 auto off: plug-in syncs do nothing (e.g. while flashing)
 CHUNK = 4096
 PROTOCOL = 2
 # Markdown files in a docs folder that aren't lessons (when a series has no include= glob)
@@ -398,7 +401,35 @@ def cmd_status(a):
     return 0
 
 
+def notify(title, body, urgent=False):
+    """Desktop notification (auto-sync has no terminal). Never fails the sync.
+    Omarchy's own sender first: notify-send reached its daemon (exit 0) but never showed."""
+    urgency = "critical" if urgent else "normal"
+    for cmd in (["omarchy-notification-send", "--app-name", "x3", "-u", urgency, title, body],
+                ["notify-send", "-a", "x3", "-u", urgency, title, body]):
+        try:
+            if subprocess.run(cmd, timeout=5, check=False).returncode == 0:
+                return
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+
+
 def cmd_sync(a):
+    if a.auto and os.path.exists(PAUSED):
+        print("auto-sync is off (x3 auto on to resume)")
+        return 0
+    try:
+        code, summary = sync(a)
+    except SystemExit as e:  # connect() and friends exit with a message
+        if a.notify and isinstance(e.code, str):
+            notify("X3 sync failed", e.code, urgent=True)
+        raise
+    if a.notify:
+        notify("X3 synced" if code == 0 else "X3 sync: problems", summary, urgent=code != 0)
+    return code
+
+
+def sync(a):
     items, problems = library()
     for p in problems:
         print("  problem:", p)
@@ -435,7 +466,10 @@ def cmd_sync(a):
         print(f"  {len(others)} file(s) only on the X3 - left alone (x3 status lists them, x3 rm removes)")
     for e in errors:
         print("  ERROR", e)
-    return 1 if errors or failed else 0
+    names = ", ".join(os.path.splitext(os.path.basename(n))[0] for n in sent[:4]) + (" ..." if len(sent) > 4 else "")
+    summary = (f"{len(sent)} sent" + (f" ({names})" if sent else "") + f", {len(ready) - len(sent) - len(errors)} up to date"
+               + (f", {len(errors) + len(failed)} failed" if errors or failed else ""))
+    return (1 if errors or failed else 0), summary
 
 
 def cmd_rm(a):
@@ -464,6 +498,24 @@ def cmd_rm(a):
     return 0
 
 
+def cmd_auto(a):
+    os.makedirs(CACHE, exist_ok=True)
+    if a.state == "off":
+        open(PAUSED, "w").close()
+        print("auto-sync off: plugging in the X3 won't sync (x3 auto on to resume)")
+    elif a.state == "on":
+        if os.path.exists(PAUSED):
+            os.remove(PAUSED)
+        print("auto-sync on")
+    rule = "/etc/udev/rules.d/70-x3-sync.rules"
+    unit = os.path.expanduser("~/.config/systemd/user/x3-sync.service")
+    print(f"  switch:    {'OFF' if os.path.exists(PAUSED) else 'on'}")
+    print(f"  udev rule: {'installed' if os.path.exists(rule) else 'MISSING'} ({rule})")
+    print(f"  user unit: {'installed' if os.path.exists(unit) else 'MISSING'} ({unit})")
+    print("  log:       journalctl --user -u x3-sync -n 30")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(prog="x3", description="Keep the Xteink X3 in step with ~/X3 (lessons + talks).")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -480,7 +532,12 @@ def main():
     p = sub.add_parser("sync", help="render, then send what differs (never deletes)")
     p.add_argument("--wait", type=float, default=30, help="seconds to wait for the X3 (default 30)")
     p.add_argument("-v", "--verbose", action="store_true")
+    p.add_argument("--notify", action="store_true", help="desktop notification with the result")
+    p.add_argument("--auto", action="store_true", help="started by plugging in: do nothing if x3 auto off")
     p.set_defaults(fn=cmd_sync)
+    p = sub.add_parser("auto", help="auto-sync on plug-in: on / off / status")
+    p.add_argument("state", nargs="?", choices=["on", "off", "status"], default="status")
+    p.set_defaults(fn=cmd_auto)
     p = sub.add_parser("rm", help="delete files from the X3 (asks first)")
     p.add_argument("names", nargs="+", help="names as x3 status shows them; wildcards ok (quote them)")
     p.add_argument("--yes", action="store_true", help="don't ask")

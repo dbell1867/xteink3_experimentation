@@ -1,8 +1,12 @@
 # Xteink X3 bring-up — plan
 
 ## Resume here
-- **Position (2026-10-06):** Stage 16a **done** (plugging USB in boots a powered-off X3). Working on the
-  seamless-sync plan below (16 -> 16b -> 16c).
+- **Position (2026-10-06):** Stage 16b **done** — snapshot stages/16-x3-library. Plug the X3 in -> it boots
+  (5/6) -> udev starts the x3-sync user service -> changed lessons/talks rendered + sent -> Omarchy notification.
+  Next: 16c (optional marimo manager) only if wanted after real use.
+- **Adding sources:** `x3 add <project>/docs --include 'lesson-*.md'` / `x3 add <deck folder>`; `x3 status`;
+  `x3 rm` is the only delete. **Before flashing firmware: `x3 auto off`** (each upload re-enumerates -> a sync
+  grabs the port), `x3 auto on` after. Log: `journalctl --user -u x3-sync`.
 - **Seamless-sync plan (agreed 2026-10-06):** cable only (no Wi-Fi creds on the X3, no Windows: work decks get sent
   to this PC). Library root ~/X3: lessons/<series> and talks/<deck> = SYMLINKS (no copies) to project docs/ and
   deck repos (each deck its own repo). 16 = `x3` command via uv tool (scan ~/X3, find X3 by USB ID 303a:1001,
@@ -16,8 +20,7 @@
   tap Confirm = resync laptop to the X3 (Home + n x Page Down); Contents jump resyncs too.
   Turning the clicker off (menu, or 30 min without a key) RESTARTS the X3 (~1.1 s back to the page via the
   saved-frame path) to drop the BLE stack. Tested with a 60 s build: no crash, no leak, laptop disconnects. Uses ~45 mA connected / 49 advertising (gauge, on battery).
-- **Talk workflow:** marimo speaker notes -> tools/notes2xtc.py -> tools/x3sync.py.
-- **Lesson workflow:** edit docs/lesson-*.md -> `.venv/bin/python tools/x3sync.py` (X3 awake + plugged in).
+- **Talk / lesson workflow:** edit (marimo speaker notes, or docs/*.md) -> plug in the X3. That's it.
 - **Next (pick):** two-way slide helper only if one-way drift hurts in real talks. (Long-press redesign DROPPED 2026-10-06.)
 - **Done today:** lesson 06 (stages 12-15b) on the X3; skill updated to G62 (G56 BLE HID + on/off life cycle,
   G57-G61, G62 SD-open power; G34/G35 deinit advice corrected).
@@ -91,7 +94,16 @@
     two measured reasons. (Capture lost the control run: the X3 re-enumerated as /dev/ttyACM1.)
 24. Stage 16a: plug USB into a powered-off X3 (battery latch released, "Sleeping" banner) -> it boots by itself:
     banner replaced by the page, kernel enumerates 303a:1001. Done twice (14:44:43, 14:45:07). Predicted ~60%.
-    Reset reason not read (talk page has no header). So auto-sync can be "plug in and walk away".
+    Reset reason not read (talk page has no header).
+25. Stage 16: `x3` command (tools/x3.py, uv tool install --editable .): library ~/X3 of symlinks, finds the X3
+    by USB id + @HELLO, render cache ~/.cache/x3 (renders byte-identical to the old tool), sends what differs,
+    never deletes. X3: sync protocol 2 (folder/file, @DATE), Books folders + "synced <date>". First sync 7 files
+    5.2 MB in 18.7 s (predicted ~19). 7 old flat duplicates removed with x3 rm (user's call).
+    16a re-test: one plug-in did NOT boot (15:05, cable fine: Power press enumerated at once); then 3 more
+    booted (after 13 min off, 10 s off, idle auto-off). "Leftover charge" theory falsified; miss unexplained.
+26. Stage 16b auto-sync: udev rule (this X3's serial) -> SYSTEMD_USER_WANTS x3-sync.service (oneshot).
+    Plug-in -> lesson 06 sent 12 s later. Bug: notify-send exit 0 but nothing shown on Omarchy -> use
+    omarchy-notification-send first (shown). Skill G63.
 
 ## Decisions
 - C++ / Arduino core 3.x via pioarduino — stock fw is also Arduino-ESP32, CrossPoint proves the platform on this device.
@@ -105,6 +117,9 @@
   Decision: keep as-is for now; revisit (option: side-by-side A/B test on device).
 - USB drops were the magnetic cable; unplug does NOT reset (measured). One reboot at 10:35:49 unexplained — boot counter now in fw.
 - NORMAL mode: 2 short waveforms (175/368 ms) on rapid re-press; how does stock fw drive the OEM normal LUTs?
+- Plug-in boot: 5 of 6. One miss (15:05) unexplained - connector seating? Watch for it.
+- @LIST computes every file's CRC each sync (~1.1 MB/s card read: 5.3 s for 5.2 MB). If the library grows,
+  store CRCs at PUT time.
 - Not additive: BLE resident 18.9 mA, open .xtc 18.6, both together ~18.6-19. Same ~17 mA load kept awake by
   either, or coincidence? (Would need both fixed/unfixed in one bench session to tell.)
 - Resolution cmd says 792x600 but panel is 528 rows — why does it work?
