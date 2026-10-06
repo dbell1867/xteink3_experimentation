@@ -1,6 +1,6 @@
 # Lesson 06 — Lessons on the bus, talking points, and a Bluetooth clicker
 
-**Stages:** 12–16b · **Date:** 2026-10-05/06
+**Stages:** 12–16c · **Date:** 2026-10-05/06
 **Code:** `stages/12-xtc-lessons/` … `stages/16-x3-library/` · **PC tools:** `tools/x3.py` (the `x3` command),
 `mdpages.py`, `notes2xtc.py`, `xtcinfo.py`, `autosync/` · **Device:** `src/xtc_book.*`, `sync_server.*`, `clicker.*`, `cp1252.h`
 
@@ -106,6 +106,9 @@ The cable stays; everything around it got automatic.
   while flashing firmware.
 - Protocol version 2: `folder/file` names (letters, digits, `._-` only) and `@DATE`.
   `x3` refuses an X3 with older firmware instead of half-working.
+- **A marimo manager** (`~/Work/Python/Marimo/x3_manager`) for the *seeing* jobs: the library
+  vs the X3, page previews, deletes behind a confirmation box, adding sources with a folder
+  browser. It imports `x3.py` as a library, so the app and the command can't drift apart.
 - **Does plugging in boot a powered-off X3?** 5 of 6 times. My "leftover charge" theory
   failed (it booted after 13 min off); the one miss is unexplained. If it still says
   "Sleeping" after 5 s, press Power.
@@ -143,6 +146,8 @@ The cable stays; everything around it got automatic.
 | 18.6 mA in light sleep | `.xtc` file left open after a 52 KB read kept the SD card active | open/read/close per page |
 | Upload "port doesn't exist" | my wait loop ran the upload after timing out | stop on timeout |
 | Auto-sync worked, no notification | `notify-send` reached Omarchy's daemon (exit 0) but never showed | Omarchy's own `omarchy-notification-send` first |
+| Preview "missing" in the app | a bare dropdown with no heading, between two sections | its own heading, under the table |
+| "Delete didn't say anything" | the refusal went to the log at the top of the page | each message right under its button |
 | Every sync re-reads all files (9.5 s listing) | the X3 computes each file's CRC on `@LIST` | fewer duplicates now; store CRCs if it grows |
 
 ## Python for the PC side (and the C++ that met it)
@@ -166,6 +171,7 @@ x3 status                                     # library vs the X3
 x3 sync                                       # or just plug in (auto-sync)
 x3 rm 'old-*.xtc'                             # the only way anything is deleted; asks first
 x3 auto off                                   # pause auto-sync while flashing
+cd ~/Work/Python/Marimo/x3_manager && uv run marimo run app.py   # the manager app
 cd ~/Work/Python/Marimo/xteink3_deck && uv run marimo run deck.py   # present; S = notes window
 ```
 On the X3: Back → Clicker → Confirm; lower key = next; tap Confirm = resync; Clicker again = off (restarts).

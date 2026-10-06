@@ -3,7 +3,8 @@
 ## Resume here
 - **Position (2026-10-06):** Stage 16b **done** — snapshot stages/16-x3-library. Plug the X3 in -> it boots
   (5/6) -> udev starts the x3-sync user service -> changed lessons/talks rendered + sent -> Omarchy notification.
-  Next: 16c (optional marimo manager) only if wanted after real use.
+  16c done: marimo manager ~/Work/Python/Marimo/x3_manager (own local repo, no remote yet):
+  `uv run marimo run app.py`. Nothing planned next - pick from real use.
 - **Adding sources:** `x3 add <project>/docs --include 'lesson-*.md'` / `x3 add <deck folder>`; `x3 status`;
   `x3 rm` is the only delete. **Before flashing firmware: `x3 auto off`** (each upload re-enumerates -> a sync
   grabs the port), `x3 auto on` after. Log: `journalctl --user -u x3-sync`.
@@ -104,6 +105,11 @@
 26. Stage 16b auto-sync: udev rule (this X3's serial) -> SYSTEMD_USER_WANTS x3-sync.service (oneshot).
     Plug-in -> lesson 06 sent 12 s later. Bug: notify-send exit 0 but nothing shown on Omarchy -> use
     omarchy-notification-send first (shown). Skill G63.
+27. Stage 16c marimo manager (user chose to build it anyway): status table (+ Check the X3, Sync now), page
+    previews (match the X3), delete with confirmation (+ warning if the library would put it back), sources
+    add (file browser) / remove (symlink only). Uses x3.py as a library (X3Error API, lock released per
+    session); marimo pinned 0.25.1. UX bugs from the user's test: Preview had no heading and was missed;
+    the delete refusal showed in the top log, far from the button -> messages next to their buttons.
 
 ## Decisions
 - C++ / Arduino core 3.x via pioarduino — stock fw is also Arduino-ESP32, CrossPoint proves the platform on this device.
