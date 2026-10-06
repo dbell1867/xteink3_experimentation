@@ -1,7 +1,7 @@
 # Lesson 06 — Lessons on the bus, talking points, and a Bluetooth clicker
 
-**Stages:** 12–15 · **Date:** 2026-10-05/06
-**Code:** `stages/12-xtc-lessons/` … `stages/15-clicker/` · **PC tools:** `tools/mdpages.py`, `xtcinfo.py`,
+**Stages:** 12–15b · **Date:** 2026-10-05/06
+**Code:** `stages/12-xtc-lessons/` … `stages/15b-clicker-off/` · **PC tools:** `tools/mdpages.py`, `xtcinfo.py`,
 `x3sync.py`, `notes2xtc.py` · **Device:** `src/xtc_book.*`, `sync_server.*`, `clicker.*`, `cp1252.h`
 
 ## Objectives
@@ -62,6 +62,23 @@ the same USB serial link as the logs:
 - **Resync** (tap Confirm, or any Contents jump): Home, then one Page Down per step — the
   laptop is made to match the X3.
 
+## Stage 15b — switching the clicker off (and an SD power bug)
+A forgotten clicker must turn itself off (30 min without a key). Testing that with a **60 s
+test build** (`PLATFORMIO_BUILD_FLAGS=-DTEST_CLICKER_IDLE_MS=60000`) found four bugs:
+1. **Crash on switch-off while connected.** `deinit(true)` freed the BLE objects, then the
+   link's teardown event reached them. Fix: disconnect, wait for it (10–40 ms), then stop.
+2. **Crash on switching back on.** `deinit(true)` releases the controller's memory for good —
+   the library says so in a comment.
+3. **A leak of ~7.6 KB per on/off cycle** with `deinit(false)`: the server's services are
+   never freed. Fix for 1–3: build the BLE stack **once**; "off" = disconnect, stop
+   advertising, **restart** — the saved-frame fast wake has the page back in **1.08 s**.
+4. **18.6 mA idle instead of 2.0** — and the first explanation (the resident BLE stack) was
+   wrong. The bench's new sleep counters showed the CPU *was* sleeping; a control run with a
+   `.txt` book open read 2.0 mA. Cause: the `.xtc` file stayed open after a 52 KB read, so the
+   **SD card stayed active**. Fix: open, read, close per page (as CrossPoint does).
+
+Crash addresses were decoded with `riscv32-esp-elf-addr2line` on the exact firmware flashed.
+
 ## Predictions: held and failed
 | Prediction | Result |
 |---|---|
@@ -70,6 +87,8 @@ the same USB serial link as the logs:
 | Page Down steps through fragments + sub-slides | ✓ — 13 presses from Home landed exactly on step 14 |
 | Clicker ~29–30 mA | ✗ — **45 connected, 49 advertising** |
 | Cost is the short HID connection interval | ✗ — advertising costs as much: radio-on ≈ +25 mA |
+| 19 mA idle comes from the resident BLE stack | ✗ — it was the open `.xtc` file (control: `.txt` = 2.0 mA) |
+| Per-page open/close brings it back to ~2 mA | ✓ — 2.0 mA with a talk open |
 
 ## Real bugs and fixes
 | Symptom | Cause | Fix |
@@ -83,6 +102,11 @@ the same USB serial link as the logs:
 | Menu said "waiting" while connected | menu only redrew on input | redraw when the clicker's state changes |
 | First clicker run "broke" | X3 and laptop not on the same step | resync; start aligned |
 | Battery read −29 mA (charging!) on USB | the gauge sees the charger (G50) | measure on battery |
+| Crash switching the clicker off | `deinit(true)` while a laptop was connected | disconnect first, then stop |
+| Crash switching it back on | `deinit(true)` released the controller memory | build once; restart for "off" |
+| Free heap −7.6 KB per on/off | `deinit(false)`: the library never frees the server's services | build once; restart for "off" |
+| 18.6 mA in light sleep | `.xtc` file left open after a 52 KB read kept the SD card active | open/read/close per page |
+| Upload "port doesn't exist" | my wait loop ran the upload after timing out | stop on timeout |
 
 ## Python for the PC side (and the C++ that met it)
 - `ast.parse(src)` + `ast.walk` gives a notebook's **string values** with quotes resolved —
@@ -102,7 +126,12 @@ the same USB serial link as the logs:
 .venv/bin/python tools/notes2xtc.py ~/Work/Python/Marimo/xteink3_deck/deck.py             # talk pages
 cd ~/Work/Python/Marimo/xteink3_deck && uv run marimo run deck.py   # present; S = notes window
 ```
-On the X3: Back → Clicker → Confirm; lower key = next; tap Confirm = resync.
+On the X3: Back → Clicker → Confirm; lower key = next; tap Confirm = resync; Clicker again = off (restarts).
+```bash
+PLATFORMIO_BUILD_FLAGS=-DTEST_CLICKER_IDLE_MS=60000 pio run -t upload   # 60 s auto-off test build
+~/.platformio/packages/toolchain-riscv32-esp/bin/riscv32-esp-elf-addr2line -pfiaC \
+    -e .pio/build/xteink_x3/firmware.elf 0x4200... 0x4200...           # decode a crash
+```
 
 ## Glossary
 - **XTC** — Xteink's book format: pre-rendered pages plus a page table and chapters.
@@ -110,3 +139,4 @@ On the X3: Back → Clicker → Confirm; lower key = next; tap Confirm = resync.
 - **Bonding** — pairing that's remembered, so the laptop reconnects by itself.
 - **Fragment** — a slide item revealed by its own click; **sub-slide** — a slide below another (Down arrow).
 - **Resync** — make the laptop's slideshow match the step shown on the X3.
+- **Control measurement** — the same test with only the suspect removed; it's what found the SD bug.
