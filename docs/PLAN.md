@@ -1,7 +1,14 @@
 # Xteink X3 bring-up — plan
 
 ## Resume here
-- **Position (2026-10-06):** Stage 15c **done** (measurement only: the restart on clicker-off is confirmed).
+- **Position (2026-10-06):** Stage 16a **done** (plugging USB in boots a powered-off X3). Working on the
+  seamless-sync plan below (16 -> 16b -> 16c).
+- **Seamless-sync plan (agreed 2026-10-06):** cable only (no Wi-Fi creds on the X3, no Windows: work decks get sent
+  to this PC). Library root ~/X3: lessons/<series> and talks/<deck> = SYMLINKS (no copies) to project docs/ and
+  deck repos (each deck its own repo). 16 = `x3` command via uv tool (scan ~/X3, find X3 by USB ID 303a:1001,
+  render changed, send, NEVER delete automatically; add/status/sync/rm) + X3 Books folders per series + sync
+  date. 16b = auto-sync on plug-in (udev -> systemd user service, notify, port lock). 16c = optional marimo
+  manager (status, add via file browser, previews, confirmed delete) on the same module.
   Both goals work: lessons on the bus (6 lessons on the X3) and marimo talking points + Bluetooth clicker.
   X3 runs the normal build (30-min clicker auto-off).
 - **Presenting:** X3 menu -> "Clicker: off" -> Confirm (radio on; laptop reconnects by itself once paired as
@@ -82,6 +89,9 @@
     Also: after light sleep the clicker did NOT reconnect; control off -> on with USB plugged (no light
     sleep) reconnected and sent keys. Core has CONFIG_BT_CTRL_MODEM_SLEEP off. Restart on "off" kept, now on
     two measured reasons. (Capture lost the control run: the X3 re-enumerated as /dev/ttyACM1.)
+24. Stage 16a: plug USB into a powered-off X3 (battery latch released, "Sleeping" banner) -> it boots by itself:
+    banner replaced by the page, kernel enumerates 303a:1001. Done twice (14:44:43, 14:45:07). Predicted ~60%.
+    Reset reason not read (talk page has no header). So auto-sync can be "plug in and walk away".
 
 ## Decisions
 - C++ / Arduino core 3.x via pioarduino — stock fw is also Arduino-ESP32, CrossPoint proves the platform on this device.
