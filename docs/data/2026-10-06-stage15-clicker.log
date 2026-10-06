@@ -1,0 +1,112 @@
+08:59:04 [08:59:04] -- port up --
+08:59:33 [08:59:33] [  32789] idle: panel rails off
+08:59:47 [08:59:47] clicker on: heap 142244 -> 60088
+08:59:47 [08:59:47] [  47493] clicker: laptop connected
+09:00:01 [09:00:01] [  61028] clicker: key 0x4E sent
+09:00:02 [09:00:02] [  61796] clicker: key 0x4E sent
+09:00:02 [09:00:02] [  62734] clicker: key 0x4E sent
+09:00:04 [09:00:04] [  64066] clicker: key 0x4E sent
+09:00:04 [09:00:04] [  64188] glitch ladder1: saw Confirm (raw 2303) for 5 ms, now None (raw 4095)
+09:00:05 [09:00:05] [  64940] clicker: key 0x4E sent
+09:00:06 [09:00:06] [  66294] clicker: key 0x4E sent
+09:00:11 [09:00:11] [  71294] glitch ladder1: saw Left (raw 1674) for 5 ms, now None (raw 4095)
+09:00:16 [09:00:16] [  76711] clicker: key 0x4B sent
+09:00:17 [09:00:17] [  77674] clicker: key 0x4E sent
+09:00:50 [09:00:50] [ 110039] idle: panel rails off
+09:05:32 [09:05:32] [ 392581] clicker: key 0x4A sent
+09:05:32 [09:05:32] [ 392716] clicker: key 0x4E sent
+09:05:33 [09:05:33] [ 392851] clicker: key 0x4E sent
+09:05:33 [09:05:33] [ 392986] clicker: key 0x4E sent
+09:05:33 [09:05:33] [ 393121] clicker: key 0x4E sent
+09:05:33 [09:05:33] [ 393256] clicker: key 0x4E sent
+09:05:33 [09:05:33] [ 393391] clicker: key 0x4E sent
+09:05:33 [09:05:33] [ 393526] clicker: key 0x4E sent
+09:05:33 [09:05:33] [ 393661] clicker: key 0x4E sent
+09:05:34 [09:05:34] [ 393796] clicker: key 0x4E sent
+09:05:34 [09:05:34] [ 393931] clicker: key 0x4E sent
+09:05:34 [09:05:34] [ 394066] clicker: key 0x4E sent
+09:05:34 [09:05:34] [ 394201] clicker: key 0x4E sent
+09:05:34 [09:05:34] [ 394336] clicker: key 0x4E sent
+09:05:34 [09:05:34] [ 394336] resync: Home + 13 x Page Down
+09:05:42 [09:05:42] [ 401900] clicker: key 0x4A sent
+09:05:42 [09:05:42] [ 402035] clicker: key 0x4E sent
+09:05:42 [09:05:42] [ 402170] clicker: key 0x4E sent
+09:05:42 [09:05:42] [ 402305] clicker: key 0x4E sent
+09:05:42 [09:05:42] [ 402440] clicker: key 0x4E sent
+09:05:42 [09:05:42] [ 402575] clicker: key 0x4E sent
+09:05:42 [09:05:42] [ 402710] clicker: key 0x4E sent
+09:05:43 [09:05:43] [ 402845] clicker: key 0x4E sent
+09:05:43 [09:05:43] [ 402980] clicker: key 0x4E sent
+09:05:43 [09:05:43] [ 403115] clicker: key 0x4E sent
+09:05:43 [09:05:43] [ 403250] clicker: key 0x4E sent
+09:05:43 [09:05:43] [ 403385] clicker: key 0x4E sent
+09:05:43 [09:05:43] [ 403520] clicker: key 0x4E sent
+09:05:43 [09:05:43] [ 403655] clicker: key 0x4E sent
+09:05:43 [09:05:43] [ 403655] resync: Home + 13 x Page Down
+09:07:52 [09:07:51] [ 531775] clicker: key 0x4A sent
+09:07:52 [09:07:52] [ 531910] clicker: key 0x4E sent
+09:07:52 [09:07:52] [ 532045] clicker: key 0x4E sent
+09:07:52 [09:07:52] [ 532180] clicker: key 0x4E sent
+09:07:52 [09:07:52] [ 532315] clicker: key 0x4E sent
+09:07:52 [09:07:52] [ 532450] clicker: key 0x4E sent
+09:07:52 [09:07:52] [ 532585] clicker: key 0x4E sent
+09:07:52 [09:07:52] [ 532720] clicker: key 0x4E sent
+09:07:53 [09:07:53] [ 532855] clicker: key 0x4E sent
+09:07:53 [09:07:53] [ 532990] clicker: key 0x4E sent
+09:07:53 [09:07:53] [ 533125] clicker: key 0x4E sent
+09:07:53 [09:07:53] [ 533260] clicker: key 0x4E sent
+09:07:53 [09:07:53] [ 533395] clicker: key 0x4E sent
+09:07:53 [09:07:53] [ 533530] clicker: key 0x4E sent
+09:07:53 [09:07:53] [ 533530] resync: Home + 13 x Page Down
+09:07:59 [09:07:59] [ 539288] clicker: key 0x4B sent
+09:07:59 [09:07:59] [ 539440] glitch ladder1: saw Confirm (raw 2825) for 5 ms, now None (raw 4095)
+09:08:00 [09:08:00] [ 539832] clicker: key 0x4B sent
+09:08:00 [09:08:00] [ 539930] glitch ladder1: saw None (raw 4095) for 113 ms, now Left (raw 1468)
+09:08:00 [09:08:00] [ 540371] clicker: key 0x4B sent
+09:08:01 [09:08:01] [ 540908] clicker: key 0x4B sent
+09:08:01 [09:08:01] [ 540923] clicker: key 0x4B sent
+09:08:01 [09:08:01] [ 541461] clicker: key 0x4B sent
+09:08:01 [09:08:01] [ 541476] clicker: key 0x4B sent
+09:08:02 [09:08:02] [ 542018] clicker: key 0x4B sent
+09:08:02 [09:08:02] [ 542033] clicker: key 0x4B sent
+09:08:02 [09:08:02] [ 542571] clicker: key 0x4B sent
+09:08:02 [09:08:02] [ 542586] clicker: key 0x4B sent
+09:08:02 [09:08:02] [ 542682] glitch ladder1: saw None (raw 4095) for 126 ms, now Left (raw 1468)
+09:08:03 [09:08:03] [ 543123] clicker: key 0x4B sent
+09:08:03 [09:08:03] [ 543660] clicker: key 0x4B sent
+09:08:04 [09:08:04] [ 543786] glitch ladder1: saw Back (raw 3598) for 5 ms, now None (raw 4095)
+09:08:07 [09:08:07] [ 547428] clicker: key 0x4A sent
+09:08:07 [09:08:07] [ 547428] resync: Home + 0 x Page Down
+09:08:12 [09:08:12] [ 552431] clicker: key 0x4E sent
+09:08:16 [09:08:16] [ 556102] clicker: key 0x4E sent
+09:08:19 [09:08:19] [ 559520] clicker: key 0x4E sent
+09:08:24 [09:08:24] [ 564738] clicker: key 0x4E sent
+09:08:28 [09:08:28] [ 568624] clicker: key 0x4E sent
+09:08:32 [09:08:32] [ 571992] clicker: key 0x4E sent
+09:08:33 [09:08:33] [ 573373] clicker: key 0x4E sent
+09:08:33 [09:08:33] [ 573495] glitch ladder1: saw Confirm (raw 3034) for 5 ms, now None (raw 4095)
+09:08:34 [09:08:34] [ 574666] clicker: key 0x4E sent
+09:08:36 [09:08:36] [ 576214] clicker: key 0x4E sent
+09:08:41 [09:08:41] [ 581602] clicker: key 0x4E sent
+09:08:43 [09:08:43] [ 583693] clicker: key 0x4E sent
+09:08:45 [09:08:45] [ 585614] clicker: key 0x4E sent
+09:08:52 [09:08:52] [ 591997] clicker: key 0x4E sent
+09:09:22 [09:09:22] [ 622572] idle: panel rails off
+09:09:40 [09:09:40] [ 640331] clicker: key 0x4B sent
+09:09:41 [09:09:41] [ 641321] clicker: key 0x4B sent
+09:09:42 [09:09:42] [ 642305] clicker: key 0x4B sent
+09:09:43 [09:09:43] [ 643562] clicker: key 0x4B sent
+09:09:45 [09:09:45] [ 645210] clicker: key 0x4B sent
+09:09:46 [09:09:46] [ 646343] clicker: key 0x4B sent
+09:10:06 [09:10:06] [ 666343] clicker: key 0x4A sent
+09:10:06 [09:10:06] [ 666478] clicker: key 0x4E sent
+09:10:06 [09:10:06] [ 666613] clicker: key 0x4E sent
+09:10:06 [09:10:06] [ 666748] clicker: key 0x4E sent
+09:10:07 [09:10:07] [ 666883] clicker: key 0x4E sent
+09:10:07 [09:10:07] [ 667018] clicker: key 0x4E sent
+09:10:07 [09:10:07] [ 667153] clicker: key 0x4E sent
+09:10:07 [09:10:07] [ 667288] clicker: key 0x4E sent
+09:10:07 [09:10:07] [ 667288] resync: Home + 7 x Page Down
+09:10:17 [09:10:17] [ 676918] idle: panel rails off
+09:10:58 [09:10:58] [ 718730] idle: panel rails off
+09:15:35 [09:15:35] -- port gone (asleep) --

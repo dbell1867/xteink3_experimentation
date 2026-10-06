@@ -6,7 +6,10 @@
 //   tap Back -> menu (Contents / Books / Text size / Clean screen)
 //   hold Power -> sleep now (also after 5 min idle)
 //   hold Confirm -> power bench (battery only, ~2.5 min)
+//   tap Confirm -> (clicker on) resync the laptop's slides to this page
 // Menus: Up/Down/Left/Right move, tap Confirm selects, tap Back goes back.
+// Presenter clicker (menu): the X3 becomes a Bluetooth keyboard; page keys send
+// Page Down/Up to the laptop FIRST, then turn the talking-points page.
 //   Back and Confirm act on RELEASE everywhere, so a key that closes a menu
 //   can't have its release reopen it in the next screen.
 //
@@ -41,6 +44,7 @@
 #include "NotoSerif36.h"
 #include "NotoSerif40.h"
 #include "battery.h"
+#include "clicker.h"
 #include "board_pins.h"
 #include "buttons.h"
 #include "epd_uc8253.h"
@@ -71,6 +75,10 @@ constexpr int CLEAN_EVERY = 15;
 constexpr uint32_t SLEEP_AFTER_MS = 5 * 60 * 1000;  // auto power-off when idle
 constexpr uint32_t LIGHT_SLEEP_MS = 50;            // bench: 2.0 mA (100 ms: 1.8 mA, not worth 2x latency)
 constexpr uint32_t STAY_AWAKE_AFTER_KEY_MS = 300;
+// Clicker radio costs ~+25 mA (45 connected / 49 advertising vs 21 awake, measured on
+// the gauge): switch it off after this long with no page key, so a forgotten clicker
+// doesn't drain the battery (it also suspends auto power-off and light sleep).
+constexpr uint32_t CLICKER_IDLE_OFF_MS = 30 * 60 * 1000;
 constexpr size_t FB_LEN = EpdUc8253::ROW_BYTES * EpdUc8253::HEIGHT;  // 52,272 bytes
 
 // Portrait page geometry (528 x 792; the bezel hides 3 px per side).
@@ -353,10 +361,32 @@ void drawList(const String& title, const std::vector<String>& rows, int selected
   canvas.print(foot);
 }
 
+String clickerRow() {
+  String r = String("Clicker: ") + clicker::stateName();
+  if (clicker::state() != clicker::State::Off) {
+    batt = battery::read();
+    r += String("  (") + (-batt.mA) + " mA)";  // radio on: show the battery draw (G35)
+  }
+  return r;
+}
+
+// Make the laptop's slides match this page: Home, then one Page Down per step
+// (a talk .xtc has one page per reveal.js step, so page n = n steps after the first).
+void resyncSlides() {
+  if (clicker::state() != clicker::State::Connected) return;
+  clicker::tap(clicker::KEY_FIRST);
+  for (int i = 0; i < page; i++) {
+    delay(120);  // let reveal.js animate; keys sent too fast can be dropped
+    clicker::tap(clicker::KEY_NEXT);
+  }
+  Serial.printf("[%7lu] resync: Home + %d x Page Down\n", (unsigned long)millis(), page);
+}
+
 std::vector<String> menuRows() {
   return {"Contents", "Books",
           xtcMode ? String("Text size: fixed (pre-rendered)") : String("Text size: ") + FONTS[fontIndex].px + " px",
-          "Clean screen", String("Landscape: keys on the ") + (keysLeft ? "left" : "right")};
+          "Clean screen", String("Landscape: keys on the ") + (keysLeft ? "left" : "right"),
+          clickerRow()};
 }
 
 std::vector<String> contentsRows() {
@@ -641,6 +671,7 @@ void collect(Actions& a) {
       if (k.e == ButtonEvent::LongPress && k.b == prevKey) a.pageDelta -= 9;
       if (k.e == ButtonEvent::LongPress && k.b == Button::Confirm) a.bench = true;
       if (tap && k.b == Button::Back) a.back = true;  // = open the menu
+      if (tap && k.b == Button::Confirm) a.select = true;  // = resync slides (clicker on)
     } else {
       if (k.e == ButtonEvent::Pressed && fwd) a.selDelta++;
       if (k.e == ButtonEvent::Pressed && rev) a.selDelta--;
@@ -684,9 +715,14 @@ void handle(const Actions& a) {
   if (screen == Screen::Reading) {
     if (a.back) {
       enter(Screen::Menu, 0);
+    } else if (a.select) {
+      resyncSlides();
     } else if (a.pageDelta != 0) {
       const int target = constrain(page + a.pageDelta, 0, pageCount() - 1);
       if (target != page) {
+        // Slides first (instant on the laptop), notes after (~0.5 s e-paper).
+        if (xtcMode && clicker::state() != clicker::State::Off)  // tap() logs sent / not sent
+          for (int i = 0; i < abs(target - page); i++) clicker::tap(target > page ? clicker::KEY_NEXT : clicker::KEY_PREV);
         page = target;
         showScreen(Mode::Fast);
       }
@@ -728,6 +764,17 @@ void handle(const Actions& a) {
           pagesUntilClean = CLEAN_EVERY;
           showScreen(Mode::Resync);
           break;
+        case 5:  // presenter clicker on/off
+          if (clicker::state() == clicker::State::Off) {
+            const uint32_t before = ESP.getFreeHeap();
+            clicker::start("X3 Clicker");
+            Serial.printf("clicker on: heap %lu -> %lu\n", (unsigned long)before, (unsigned long)ESP.getFreeHeap());
+          } else {
+            clicker::stop();
+            Serial.printf("clicker off: heap %lu\n", (unsigned long)ESP.getFreeHeap());
+          }
+          showScreen(Mode::Fast);
+          break;
         case 4:  // turn landscape pages (and menus) 180 degrees
           keysLeft = !keysLeft;
           prefs.putBool("keysLeft", keysLeft);
@@ -739,6 +786,7 @@ void handle(const Actions& a) {
         page = chapterPage(sel);
         screen = Screen::Reading;
         showScreen(Mode::Half);
+        resyncSlides();  // presenter: the laptop jumps too
       }
     } else if (screen == Screen::Books) {
       if (bookPaths[sel] != bookPath) {
@@ -882,9 +930,25 @@ void loop() {
   collect(a);
   handle(a);
 
+  // The clicker's state changes in the BLE task; show it if the menu is up.
+  static clicker::State shownClicker = clicker::State::Off;
+  if (clicker::state() != shownClicker) {
+    shownClicker = clicker::state();
+    if (screen == Screen::Menu) showScreen(Mode::Fast);
+  }
+
   // Auto power-off when idle -- but not while a computer is connected: it would
   // cut the USB link (sync, logs) and the board is on USB power anyway.
-  if (!HWCDC::isPlugged() && millis() - lastActivity > SLEEP_AFTER_MS) {
+  // ...nor during a talk: the clicker's radio must stay up (and a talk can go
+  // 5 min without a key press). But a forgotten clicker turns itself off.
+  if (clicker::state() != clicker::State::Off && millis() - lastKeyEvent > CLICKER_IDLE_OFF_MS) {
+    clicker::stop();
+    Serial.printf("[%7lu] clicker: %lu min without a key -> off\n", (unsigned long)millis(),
+                  (unsigned long)(CLICKER_IDLE_OFF_MS / 60000));
+    lastActivity = millis();  // normal idle rules (light sleep, auto power-off) resume from now
+  }
+  const bool clickerOn = clicker::state() != clicker::State::Off;
+  if (!HWCDC::isPlugged() && !clickerOn && millis() - lastActivity > SLEEP_AFTER_MS) {
     goToSleep("idle");
   } else if (epd.powered() && millis() - lastActivity > RAILS_OFF_AFTER_MS) {
     epd.powerOff();
@@ -894,6 +958,6 @@ void loop() {
   // Idle: light sleep instead of spinning, unless a computer is on the USB bus
   // (light sleep would drop the link, G17e) or a key is being handled.
   const bool idle = !buttons.busy() && millis() - lastKeyEvent > STAY_AWAKE_AFTER_KEY_MS && qHead == qTail;
-  if (idle && !HWCDC::isPlugged()) power_bench::lightSleep(LIGHT_SLEEP_MS);
+  if (idle && !HWCDC::isPlugged() && !clickerOn) power_bench::lightSleep(LIGHT_SLEEP_MS);
   else delay(1);
 }

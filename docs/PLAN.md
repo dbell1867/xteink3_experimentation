@@ -1,16 +1,16 @@
 # Xteink X3 bring-up — plan
 
 ## Resume here
-- **Position:** Stage 14 (talking points) **done** — snapshot stages/14-talking-points.
-- **Talk workflow:** write speaker notes in marimo (`uv run marimo edit deck.py`, slides layout) ->
-  `.venv/bin/python tools/notes2xtc.py ~/Work/Python/Marimo/<deck>/deck.py` -> `tools/x3sync.py`.
-  One X3 page per reveal.js step (slides, fragments, sub-slides); ~10-11 note lines fit; it warns if cut off.
-- **Test deck:** ~/Work/Python/Marimo/xteink3_deck (marimo 0.25.1, own git repo, not committed by me).
-  Layout file pairs notes with cells BY POSITION. Tested: arrows still change slides with a slider focused;
-  Right skips sub-slides (clicker must send reveal's linear "next"); S opens marimo's notes window.
+- **Position:** Stage 15 (presenter clicker) **done** — snapshot stages/15-clicker. All 14 steps of the test deck
+  matched; back, Contents jump and resync work.
+- **Presenting:** X3 menu -> "Clicker: off" -> Confirm (radio on; laptop reconnects by itself once paired as
+  "X3 Clicker"). Open talk-<deck>.xtc. Lower key = Page Down to the laptop, then the notes page; upper = Page Up;
+  tap Confirm = resync laptop to the X3 (Home + n x Page Down); Contents jump resyncs too.
+  Clicker turns itself off after 30 min without a key (built, NOT yet tested). Uses ~45 mA connected / 49 advertising (gauge, on battery).
+- **Talk workflow:** marimo speaker notes -> tools/notes2xtc.py -> tools/x3sync.py.
 - **Lesson workflow:** edit docs/lesson-*.md -> `.venv/bin/python tools/x3sync.py` (X3 awake + plugged in).
-- **Next:** clicker spike — X3 as BLE keyboard sending reveal's "next"/"prev" (Space/PageDown? verify),
-  step counting from the layout, resync gesture; measure BLE current. Two-way helper only if drift hurts.
+- **Next (pick):** parked long-press redesign; skill update (G35 BLE HID data point, G34 HID notes); lesson 06
+  (lessons pipeline + talking points + clicker); two-way helper only if one-way drift hurts in real talks.
 - **Git:** commit per stage locally; the USER pushes (never push — see memory).
 - **Workflow notes:** stop any follow_serial capture before uploading (it holds the port); don't `pkill -f` a pattern
   that's in your own shell's command line. When copying to SD: /books at card ROOT, and eject before removing.
@@ -58,6 +58,11 @@
 20. Stage 14 talking points: marimo 0.25.1 slides layout format read from marimo's own code (notes per cell,
     by position). tools/notes2xtc.py: one page per step, titles via AST (regex failed twice). Bug: XTC names are
     UTF-8 but the UI font is cp1252 ("Â·") -> shared src/cp1252.h. Compact talk layout: no overflow.
+21. Stage 15 clicker: X3 = BLE HID keyboard (core BLE lib, NimBLE, Just Works bonding). BLE heap 82 KB, flash +320 KB.
+    Page Down steps reveal.js linearly (13 x from Home landed exactly on step 14). First "failure" = X3 and laptop
+    not starting aligned; resync fixes. Menu status was stale (no redraw on state change) -> auto-redraw + logs.
+    Power: predicted 29-30 mA, measured 45 connected / 49 advertising (on battery; the USB reading was the charger,
+    G50). Hypothesis "short HID connection interval" FALSIFIED (advertising costs as much): radio-on ~+25 mA.
 
 ## Decisions
 - C++ / Arduino core 3.x via pioarduino — stock fw is also Arduino-ESP32, CrossPoint proves the platform on this device.
