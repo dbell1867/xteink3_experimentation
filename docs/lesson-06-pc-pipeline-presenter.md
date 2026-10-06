@@ -1,6 +1,6 @@
 # Lesson 06 — Lessons on the bus, talking points, and a Bluetooth clicker
 
-**Stages:** 12–15b · **Date:** 2026-10-05/06
+**Stages:** 12–15c · **Date:** 2026-10-05/06
 **Code:** `stages/12-xtc-lessons/` … `stages/15b-clicker-off/` · **PC tools:** `tools/mdpages.py`, `xtcinfo.py`,
 `x3sync.py`, `notes2xtc.py` · **Device:** `src/xtc_book.*`, `sync_server.*`, `clicker.*`, `cp1252.h`
 
@@ -77,6 +77,16 @@ test build** (`PLATFORMIO_BUILD_FLAGS=-DTEST_CLICKER_IDLE_MS=60000`) found four 
    `.txt` book open read 2.0 mA. Cause: the `.xtc` file stayed open after a 52 KB read, so the
    **SD card stayed active**. Fix: open, read, close per page (as CrossPoint does).
 
+## Stage 15c — could "off" skip the restart?
+Bug 4's fix left a question: the restart was chosen while the 18.6 mA was still blamed on
+Bluetooth. So a test build (`-DTEST_CLICKER_NO_RESTART`) made "off" only stop the radio, and
+the bench ran with the stack still in memory — same talk open as the 2.0 mA control.
+- Light sleep was **accepted** (0 rejected, full 50 ms sleeps) but drew **18.9 mA**.
+- After that sleep the clicker **didn't reconnect**. Control: off → on with USB plugged in
+  (no light sleep) reconnected fine — so it's sleep, not stop/start, that breaks it.
+- The core is built with Bluetooth controller sleep off (`CONFIG_BT_CTRL_MODEM_SLEEP`).
+The restart stays — now on two measured reasons instead of one confounded one.
+
 Crash addresses were decoded with `riscv32-esp-elf-addr2line` on the exact firmware flashed.
 
 ## Predictions: held and failed
@@ -89,6 +99,7 @@ Crash addresses were decoded with `riscv32-esp-elf-addr2line` on the exact firmw
 | Cost is the short HID connection interval | ✗ — advertising costs as much: radio-on ≈ +25 mA |
 | 19 mA idle comes from the resident BLE stack | ✗ — it was the open `.xtc` file (control: `.txt` = 2.0 mA) |
 | Per-page open/close brings it back to ~2 mA | ✓ — 2.0 mA with a talk open |
+| Stack kept but stopped: light sleep ~2–4 mA | ✗ — **18.9 mA**, and no reconnect after sleep |
 
 ## Real bugs and fixes
 | Symptom | Cause | Fix |

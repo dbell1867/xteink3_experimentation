@@ -653,12 +653,19 @@ void goToSleep(const char* why) {
 
 // Turning the clicker off RESTARTS the X3. Once built, the BLE controller can't
 // be removed cleanly (deinit(true): next start crashes; deinit(false): leaks
-// ~7.6 KB per cycle) and while it exists light sleep doesn't work: the bench
-// measured 19 mA idle instead of 2.0 (this Arduino build has BT controller sleep
-// and power management disabled). A restart drops it; the saved-frame fast
-// wake brings the page back in ~1 s.
+// ~7.6 KB per cycle). Keeping it built but stopped was measured (stage 15c,
+// TEST_CLICKER_NO_RESTART build): light sleep is accepted but draws 18.9 mA
+// instead of 2.0 (this core has CONFIG_BT_CTRL_MODEM_SLEEP off), and after
+// light sleep the clicker no longer reconnects (off -> on without sleep works).
+// A restart drops it; the saved-frame fast wake brings the page back in ~1 s.
 void restartWithoutClicker(const char* why) {
   clicker::stop();  // drop the laptop cleanly first
+#ifdef TEST_CLICKER_NO_RESTART  // test build: keep the (stopped) stack, measure idle power with it
+  Serial.printf("[%7lu] clicker off (%s), NO restart (test build): heap %lu\n", (unsigned long)millis(), why,
+                (unsigned long)ESP.getFreeHeap());
+  showScreen(Mode::Fast);
+  return;
+#endif
   Serial.printf("[%7lu] clicker off (%s) -> restarting to free the BLE stack\n", (unsigned long)millis(), why);
   screen = Screen::Reading;
   renderPage();  // the page, not the menu, is what the restart shows

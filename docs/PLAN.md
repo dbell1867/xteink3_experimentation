@@ -1,9 +1,9 @@
 # Xteink X3 bring-up — plan
 
 ## Resume here
-- **Position (paused 2026-10-06):** Stage 15b **done** — snapshot stages/15b-clicker-off. Both goals work:
-  lessons on the bus (6 lessons on the X3) and marimo talking points + Bluetooth clicker (14/14 steps).
-  X3 runs the normal build (30-min clicker auto-off). Everything committed and pushed (origin/main = 5b2b5ca).
+- **Position (2026-10-06):** Stage 15c **done** (measurement only: the restart on clicker-off is confirmed).
+  Both goals work: lessons on the bus (6 lessons on the X3) and marimo talking points + Bluetooth clicker.
+  X3 runs the normal build (30-min clicker auto-off).
 - **Presenting:** X3 menu -> "Clicker: off" -> Confirm (radio on; laptop reconnects by itself once paired as
   "X3 Clicker"). Open talk-<deck>.xtc. Lower key = Page Down to the laptop, then the notes page; upper = Page Up;
   tap Confirm = resync laptop to the X3 (Home + n x Page Down); Contents jump resyncs too.
@@ -11,8 +11,7 @@
   saved-frame path) to drop the BLE stack. Tested with a 60 s build: no crash, no leak, laptop disconnects. Uses ~45 mA connected / 49 advertising (gauge, on battery).
 - **Talk workflow:** marimo speaker notes -> tools/notes2xtc.py -> tools/x3sync.py.
 - **Lesson workflow:** edit docs/lesson-*.md -> `.venv/bin/python tools/x3sync.py` (X3 awake + plugged in).
-- **Next (pick):** parked long-press redesign; measure "build BLE once, no restart" idle power (would avoid the
-  restart on clicker-off if ~2 mA); two-way slide helper only if one-way drift hurts in real talks.
+- **Next (pick):** parked long-press redesign; two-way slide helper only if one-way drift hurts in real talks.
 - **Done today:** lesson 06 (stages 12-15b) on the X3; skill updated to G62 (G56 BLE HID + on/off life cycle,
   G57-G61, G62 SD-open power; G34/G35 deinit advice corrected).
 - **Git:** commit per stage locally; the USER pushes (never push — see memory).
@@ -77,6 +76,12 @@
     active ~17 mA. Fix: open/read/close per page (as CrossPoint does) -> 2.0 mA with the talk open.
     The restart decision rested on the confounded 19 mA; kept anyway (robust, returns 82 KB). "Build once, no
     restart" idle power is UNMEASURED.
+23. Stage 15c "build once, no restart" measured (test build -DTEST_CLICKER_NO_RESTART: off = stop only).
+    Predicted 2-4 mA, light sleep accepted. Measured: accepted (rej 0, full 50 ms sleeps) but 18.9 mA
+    (100 ms: 18.4; +panel 19.0) vs 2.0 control (same talk open, BLE never built) -> prediction FAILED.
+    Also: after light sleep the clicker did NOT reconnect; control off -> on with USB plugged (no light
+    sleep) reconnected and sent keys. Core has CONFIG_BT_CTRL_MODEM_SLEEP off. Restart on "off" kept, now on
+    two measured reasons. (Capture lost the control run: the X3 re-enumerated as /dev/ttyACM1.)
 
 ## Decisions
 - C++ / Arduino core 3.x via pioarduino — stock fw is also Arduino-ESP32, CrossPoint proves the platform on this device.
@@ -90,5 +95,7 @@
   Decision: keep as-is for now; revisit (option: side-by-side A/B test on device).
 - USB drops were the magnetic cable; unplug does NOT reset (measured). One reboot at 10:35:49 unexplained — boot counter now in fw.
 - NORMAL mode: 2 short waveforms (175/368 ms) on rapid re-press; how does stock fw drive the OEM normal LUTs?
+- Not additive: BLE resident 18.9 mA, open .xtc 18.6, both together ~18.6-19. Same ~17 mA load kept awake by
+  either, or coincidence? (Would need both fixed/unfixed in one bench session to tell.)
 - Resolution cmd says 792x600 but panel is 528 rows — why does it work?
 - (answered) -20 mA on USB at 100 % = charge terminated, battery feeds board; only USB hint is gauge current sign.
