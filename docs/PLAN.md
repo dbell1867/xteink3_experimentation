@@ -11,7 +11,7 @@
   saved-frame path) to drop the BLE stack. Tested with a 60 s build: no crash, no leak, laptop disconnects. Uses ~45 mA connected / 49 advertising (gauge, on battery).
 - **Talk workflow:** marimo speaker notes -> tools/notes2xtc.py -> tools/x3sync.py.
 - **Lesson workflow:** edit docs/lesson-*.md -> `.venv/bin/python tools/x3sync.py` (X3 awake + plugged in).
-- **Next (pick):** parked long-press redesign; two-way slide helper only if one-way drift hurts in real talks.
+- **Next (pick):** two-way slide helper only if one-way drift hurts in real talks. (Long-press redesign DROPPED 2026-10-06.)
 - **Done today:** lesson 06 (stages 12-15b) on the X3; skill updated to G62 (G56 BLE HID + on/off life cycle,
   G57-G61, G62 SD-open power; G34/G35 deinit advice corrected).
 - **Git:** commit per stage locally; the USER pushes (never push — see memory).
@@ -89,7 +89,7 @@
 - Display driver choice deferred until the controller probe says UC8253 or UC8279d.
 
 ## Open questions
-- (PARKED 2026-10-05) Long-press on page keys fires the 1-page turn first, then the +10 jump (jarring). Options discussed 2026-10-05:
+- (DROPPED 2026-10-06 by the user; behaviour stays as-is) Long-press on page keys fires the 1-page turn first, then the +10 jump (jarring). Options discussed 2026-10-05:
   A act-on-release (clean, but +~190 ms per turn: measured taps 130-240 ms), B press + auto-repeat for page keys,
   C separate jump gesture, D delayed refresh (rejected). Leaning: per-key policy (page keys B, Back/Power A).
   Decision: keep as-is for now; revisit (option: side-by-side A/B test on device).
